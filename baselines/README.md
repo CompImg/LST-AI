@@ -90,6 +90,10 @@ As nn-unet takes a while to train, it's very practical that nnunet automatically
 
 Run `nnUNet_find_best_configuration` to identify the best model based on five-fold cross validation. However, this also requires you having trained all five folds! You can also disable ensembling via `--disable_ensembling`.
 
+```
+nnUNetv2_find_best_configuration DATASET_NAME_OR_ID -c CONFIGURATIONS 
+```
+
 ### Inference
 
 Now, we can finally run inference on the testset - we trained a 3d_fullres, so please use this model as input model:
