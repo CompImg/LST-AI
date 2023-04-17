@@ -1,5 +1,5 @@
-## nn-unet (V1) based ms brain lesion segmentation
-## please note that nn-unet V2 is a reimplementation of the oce, but not of the method - both yield the same results!
+## nn-unetV1 ms brain lesion segmentation
+#### please note that nn-unet V2 is a reimplementation of the code, but not of the method - both yield the same results!
 
 This repository features small utility script to allow to train a nn-unet for lesion segmentation,
 based on the conventions of the [official nn-unet repository](https://github.com/MIC-DKFZ/nnUNet#run-inference) by Isensee et al.
