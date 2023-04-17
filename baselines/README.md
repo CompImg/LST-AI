@@ -65,6 +65,33 @@ Please place/merge the folder `Task500_MSBrainLesion` into the raw database (sam
 
 e.g. /mnt/Drive4/julian/nnunet_paths/nnUNet_raw_data_base/nnUNet_raw_data
 
+
+### Starting the training
+
+nn-unet provides different options for training: [2d, 3d_lowres, 3d_fullres, 3d_cascade]. Prepare the training by running the following command:
+
+`nnUNet_plan_and_preprocess -t 501 -tl 32 -tf 32 --verify_dataset_integrity`, and specify the number of workers via `-tl` and `-tf`.
+
+In this case, we use 2d and 3d_fullres options, which need to be independently trained for all (5) folds.
+
+`
+CUDA_VISIBLE_DEVICES=6 nnUNet_train 3d_fullres nnUnetTrainV2 501 3 --npz
+`
+
+Here 501 corresponds to the task id you assigned during the train/test set generation, and 3 to the fold id (run the same instructions for all folds in [0,1,2,3,4]).
+
+### Resuming the training after N (50, 100, ...) epochs
+
+As nn-unet takes a while to train, it's very practical that nnunet automatically saves checkpoints every 50 epochs. To continue training, simply add the `-c` option. E.g.
+
+`CUDA_VISIBLE_DEVICES=6 nnUNet_train 3d_fullres nnUnetTrainV2 501 3 --npz -c`
+
+### Choosing the best model
+
+Run `nnUNet_find_best_configuration` to identify the best model based on five-fold cross validation. However, this also requires you having trained all five folds! You can also disable ensembling via `--disable_ensembling`.
+
+### Inference
+
 Now, we can finally run inference on the testset - we trained a 3d_fullres, so please use this model as input model:
 
 ```
