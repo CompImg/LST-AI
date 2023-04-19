@@ -104,8 +104,7 @@ if __name__ == '__main__':
    }
     json_dict['numTraining'] = 0
     json_dict['numTest'] = scan_cnt
-    json_dict['test'] = [{'image': str(t1w_file_nnunet[i])} #.replace("labelsTr", "imagesTr")} #, "label": test_image_labels[i] }
-                            for i in range(len(t1w_file_nnunet))]
+    json_dict['test'] = [str(test_image_t1w[i]) for i in range(len(t1w_file_nnunet))]
     json_dict['train'] = []
 
     # create dataset_description.json
