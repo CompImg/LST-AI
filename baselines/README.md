@@ -47,6 +47,40 @@ Please place the folder `Task500_MSBrainLesion` into the raw database:
 
 e.g. /mnt/Drive4/julian/nnunet_paths/nnUNet_raw_data_base/nnUNet_raw_data
 
+nn-UNet follows the medical decathlon dataset format, so noew we have totally different file name ids, i.e.:
+
+```
+imagesTr/
+├── MSBrainLesion_001_0000.nii.gz
+├── MSBrainLesion_001_0001.nii.gz
+├── MSBrainLesion_002_0000.nii.gz
+├── MSBrainLesion_002_0001.nii.gz
+├── MSBrainLesion_003_0000.nii.gz
+├── MSBrainLesion_003_0001.nii.gz
+├── MSBrainLesion_004_0000.nii.gz
+├── MSBrainLesion_004_0001.nii.gz
+├── MSBrainLesion_005_0000.nii.gz
+├── MSBrainLesion_005_0001.nii.gz
+├── MSBrainLesion_006_0000.nii.gz
+├── MSBrainLesion_006_0001.nii.gz
+├── MSBrainLesion_007_0000.nii.gz
+├── MSBrainLesion_007_0001.nii.gz
+
+....
+
+labelsTr/
+├── MSBrainLesion_001.nii.gz
+├── MSBrainLesion_002.nii.gz
+├── MSBrainLesion_003.nii.gz
+├── MSBrainLesion_004.nii.gz
+├── MSBrainLesion_005.nii.gz
+├── MSBrainLesion_006.nii.gz
+├── MSBrainLesion_007.nii.gz
+
+```
+
+For the training and inference we adhere to this convention, and use a [renaming utility script](rename.py) to do the naming conversion for the metrics computation.
+
 ### Prepare test data
 
 To create the test set, we have to follow a similar approach:
