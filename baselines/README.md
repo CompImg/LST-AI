@@ -142,7 +142,15 @@ nnUNet_predict -i FOLDER_WITH_TEST_CASES -o OUTPUT_FOLDER_MODEL1 -tr nnUNetTrain
 
 ```
 nnUNet_predict -i FOLDER_WITH_TEST_CASES -o OUTPUT_FOLDER_MODEL1 -tr nnUNetTrainerV2 -ctr nnUNetTrainerV2CascadeFullRes -m 3d_fullres -p nnUNetPlansv2.1 -t Task500_MSBrainLesion
+
 ```
+### Rename to BIDS
+
+```
+python3 rename.py -i /path/to/masks -c conversion_dict_test.json
+
+```
+
 
 ### Evaluation of test set samples
 
