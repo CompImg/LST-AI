@@ -96,14 +96,16 @@ nnUNetv2_find_best_configuration DATASET_NAME_OR_ID -c CONFIGURATIONS
 
 ### Inference
 
-Now, we can finally run inference on the testset - we trained a 3d_fullres, so please use this model as input model:
+Now, we can finally run inference on the testset - we trained both 2D and 3d_fullres. Here are the commands that use ensembling:
 
 ```
-nnUNet_predict -i $nnUNet_raw_data_base/nnUNet_raw_data/Task500_MSBrainLesion/imagesTs -o /mnt/Drive4/julian/out -t 500 -m 3d_fullres
+nnUNet_predict -i FOLDER_WITH_TEST_CASES -o OUTPUT_FOLDER_MODEL1 -tr nnUNetTrainerV2 -ctr nnUNetTrainerV2CascadeFullRes -m 2d -p nnUNetPlansv2.1 -t Task500_MSBrainLesion
+```
+
+```
+nnUNet_predict -i FOLDER_WITH_TEST_CASES -o OUTPUT_FOLDER_MODEL1 -tr nnUNetTrainerV2 -ctr nnUNetTrainerV2CascadeFullRes -m 3d_fullres -p nnUNetPlansv2.1 -t Task500_MSBrainLesion
 ```
 
 ### Evaluation of test set samples
 
-Evaluation of DICE score: (c.f. [url](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/inference_example_Prostate.md))
-
-nnUNet_evaluate_folder -ref FOLDER_WITH_GT -pred FOLDER_WITH_PREDICTIONS -l 1
+We evaluate the masks using ANIMA.
