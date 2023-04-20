@@ -98,9 +98,13 @@ nnUNetv2_find_best_configuration DATASET_NAME_OR_ID -c CONFIGURATIONS
 
 Now, we can finally run inference on the testset - we trained both 2D and 3d_fullres. Here are the commands that use ensembling:
 
+#### 2D-UNet
+
 ```
 nnUNet_predict -i FOLDER_WITH_TEST_CASES -o OUTPUT_FOLDER_MODEL1 -tr nnUNetTrainerV2 -ctr nnUNetTrainerV2CascadeFullRes -m 2d -p nnUNetPlansv2.1 -t Task500_MSBrainLesion
 ```
+
+#### 3D-UNet
 
 ```
 nnUNet_predict -i FOLDER_WITH_TEST_CASES -o OUTPUT_FOLDER_MODEL1 -tr nnUNetTrainerV2 -ctr nnUNetTrainerV2CascadeFullRes -m 3d_fullres -p nnUNetPlansv2.1 -t Task500_MSBrainLesion
