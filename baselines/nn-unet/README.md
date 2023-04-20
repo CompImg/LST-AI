@@ -47,6 +47,40 @@ Please place the folder `Task500_MSBrainLesion` into the raw database:
 
 e.g. /mnt/Drive4/julian/nnunet_paths/nnUNet_raw_data_base/nnUNet_raw_data
 
+nn-UNet follows the medical decathlon dataset format, so noew we have totally different file name ids, i.e.:
+
+```
+imagesTr/
+├── MSBrainLesion_001_0000.nii.gz
+├── MSBrainLesion_001_0001.nii.gz
+├── MSBrainLesion_002_0000.nii.gz
+├── MSBrainLesion_002_0001.nii.gz
+├── MSBrainLesion_003_0000.nii.gz
+├── MSBrainLesion_003_0001.nii.gz
+├── MSBrainLesion_004_0000.nii.gz
+├── MSBrainLesion_004_0001.nii.gz
+├── MSBrainLesion_005_0000.nii.gz
+├── MSBrainLesion_005_0001.nii.gz
+├── MSBrainLesion_006_0000.nii.gz
+├── MSBrainLesion_006_0001.nii.gz
+├── MSBrainLesion_007_0000.nii.gz
+├── MSBrainLesion_007_0001.nii.gz
+
+....
+
+labelsTr/
+├── MSBrainLesion_001.nii.gz
+├── MSBrainLesion_002.nii.gz
+├── MSBrainLesion_003.nii.gz
+├── MSBrainLesion_004.nii.gz
+├── MSBrainLesion_005.nii.gz
+├── MSBrainLesion_006.nii.gz
+├── MSBrainLesion_007.nii.gz
+
+```
+
+For the training and inference we adhere to this convention, and use a [renaming utility script](rename.py) to do the naming conversion for the metrics computation.
+
 ### Prepare test data
 
 To create the test set, we have to follow a similar approach:
@@ -96,14 +130,28 @@ nnUNetv2_find_best_configuration DATASET_NAME_OR_ID -c CONFIGURATIONS
 
 ### Inference
 
-Now, we can finally run inference on the testset - we trained a 3d_fullres, so please use this model as input model:
+Now, we can finally run inference on the testset - we trained both 2D and 3d_fullres. Here are the commands that use ensembling:
+
+#### 2D-UNet
 
 ```
-nnUNet_predict -i $nnUNet_raw_data_base/nnUNet_raw_data/Task500_MSBrainLesion/imagesTs -o /mnt/Drive4/julian/out -t 500 -m 3d_fullres
+nnUNet_predict -i FOLDER_WITH_TEST_CASES -o OUTPUT_FOLDER_MODEL1 -tr nnUNetTrainerV2 -ctr nnUNetTrainerV2CascadeFullRes -m 2d -p nnUNetPlansv2.1 -t Task500_MSBrainLesion
 ```
+
+#### 3D-UNet
+
+```
+nnUNet_predict -i FOLDER_WITH_TEST_CASES -o OUTPUT_FOLDER_MODEL1 -tr nnUNetTrainerV2 -ctr nnUNetTrainerV2CascadeFullRes -m 3d_fullres -p nnUNetPlansv2.1 -t Task500_MSBrainLesion
+
+```
+### Rename to BIDS
+
+```
+python3 rename.py -i /path/to/masks -c conversion_dict_test.json
+
+```
+
 
 ### Evaluation of test set samples
 
-Evaluation of DICE score: (c.f. [url](https://github.com/MIC-DKFZ/nnUNet/blob/master/documentation/inference_example_Prostate.md))
-
-nnUNet_evaluate_folder -ref FOLDER_WITH_GT -pred FOLDER_WITH_PREDICTIONS -l 1
+We evaluate the masks using ANIMA.

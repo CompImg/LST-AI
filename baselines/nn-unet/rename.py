@@ -20,18 +20,19 @@ d = dict((v,k) for k,v in d.items())
 res = dict()
 for key, val in d.items():
    if 't1' in val:
-        new_key = os.path.basename(key).replace('.gz','')
-        new_val = os.path.basename(val).replace('.gz','')
+        new_key = os.path.basename(key)#.replace('.gz','')
+        new_val = os.path.basename(val)#.replace('.gz','')
         new_val = new_val.replace("t1","mask")
         new_key = new_key.replace("_0000","")
         res[new_key] = new_val
 
 # swap keys and vals
 res = dict((v,k) for k,v in res.items())
-
+print(res)
 for key, val in res.items():
     print(f'Renaming {val} to {key}')
     src = os.path.join(os.path.abspath(args.input_directory), val)
     dest = os.path.join(os.path.abspath(args.input_directory), key)
+    print(src, dest)
     assert os.path.isfile(src) == True, 'File does not exist! Exception occured.'
     os.rename(src, dest )
