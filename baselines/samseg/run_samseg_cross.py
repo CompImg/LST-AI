@@ -18,7 +18,8 @@ def process_samseg(dirs, derivatives_dir, freesurfer_path, remove_temp=False, co
         ### assemble T1w and FLAIR file lists
         t1w = sorted(list(Path(dir).rglob('*T1w*')))
         flair = sorted(list(Path(dir).rglob('*FLAIR*')))
-
+        
+        # convert entries to string
         t1w = [str(x) for x in t1w]
         flair = [str(x) for x in flair]
         
@@ -26,6 +27,7 @@ def process_samseg(dirs, derivatives_dir, freesurfer_path, remove_temp=False, co
         loop_subID = getSubjectID(t1w[0])
 
         try:
+            # check if more than 1 scans are available and if there are as many t1 as flair images
             if (len(t1w) != len(flair)) or (len(t1w) < 1) or (len(flair) < 1):
                     # instead of using assert we use this mechanism due to parallel processing
                     # assert len(t1w) == len(flair), 'Mismatch T1w/FLAIR number'
@@ -45,6 +47,7 @@ def process_samseg(dirs, derivatives_dir, freesurfer_path, remove_temp=False, co
 
                 ### perform coregistration of FLAIR to T1w
                 # do the registration in a template folder and distribute its results to BIDS conform output directories later
+
                 # create template folder
                 #print(t1w)
                 temp_dir = os.path.join(derivatives_dir, f'sub-{loop_subID}', f'ses-{loop_sesID_t1}', 'temp')
@@ -53,15 +56,16 @@ def process_samseg(dirs, derivatives_dir, freesurfer_path, remove_temp=False, co
                 print(temp_dir_output)
                 Path(temp_dir_output).mkdir(parents=True, exist_ok=True)
 
+                # generate a derivative folder for each session (BIDS)
+                deriv_ses = os.path.join(derivatives_dir, f'sub-{loop_subID}', f'ses-{loop_sesID_t1}', 'anat')
+                Path(deriv_ses).mkdir(parents=True, exist_ok=True)
+
                 # co-register FLAIR to T1w if necessary
                 if coregister:
                     # pre-define paths of registered image(s) 
                     flair_reg_field = str(Path(flair[i]).name).replace("FLAIR.nii.gz", "space-T1w_FLAIR.lta")
                     flair_reg = str(Path(flair[i]).name).replace("FLAIR.nii.gz", "space-T1w_FLAIR.mgz")
-                    
-                    print(loop_subID)
 
-                    ### co-register flairs to their corresponding registered T1w images
                     # get transformation
                     os.system(f'export FREESURFER_HOME={freesurfer_path} ; \
                                 cd {temp_dir}; \
@@ -74,20 +78,20 @@ def process_samseg(dirs, derivatives_dir, freesurfer_path, remove_temp=False, co
                                 mri_vol2vol --mov {flair[i]} --reg {flair_reg_field} --o {flair_reg} --targ {t1w[i]};\
                                 ')
                     
-                    # copy the FLAIR transformation file
+                    # copy the FLAIR transformation file from template folder to derivatives session folder
                     reg_field_temp_location = os.path.join(temp_dir, flair_reg_field)
-                    reg_field_target_location = os.path.join(derivatives_dir, f'sub-{loop_subID}', f'ses-{loop_sesID_flair}', 'anat', flair_reg_field)
+                    reg_field_target_location = os.path.join(deriv_ses, flair_reg_field)
+                    #print(reg_field_temp_location)
+                    #print(reg_field_target_location)
                     MoveandCheck(reg_field_temp_location, reg_field_target_location)
-                    # copy the registered FLAIR image file
+                    # copy the registered FLAIR image file from template fodler to derivatives session folder
                     flair_temp_location = os.path.join(temp_dir, flair_reg)
-                    flair_target_location = os.path.join(derivatives_dir, f'sub-{loop_subID}', f'ses-{loop_sesID_flair}', 'anat', flair_reg)
+                    flair_target_location = os.path.join(deriv_ses, flair_reg)
+                    #print(flair_temp_location)
+                    #print(flair_target_location)
                     MoveandCheck(flair_temp_location, flair_target_location)
                 else:
                     flair_reg = flair[i]
-
-                # generate a derivative folder for each session (BIDS)
-                deriv_ses = os.path.join(derivatives_dir, f'sub-{loop_subID}', f'ses-{loop_sesID_t1}', 'anat')
-                Path(deriv_ses).mkdir(parents=True, exist_ok=True)
 
                 ### run SAMSEG cross sectional segmentation 
                 os.system(f'export FREESURFER_HOME={freesurfer_path} ; \
@@ -95,15 +99,7 @@ def process_samseg(dirs, derivatives_dir, freesurfer_path, remove_temp=False, co
                             run_samseg --input {t1w[i]} {flair_reg} --threads 4 --pallidum-separate --lesion --lesion-mask-pattern 0 1 -o output/\
                             ')
 
-                # # aggregate the samseg output files and move to appropriate directories
-                # if len(tp_folder) > 1:
-
-                #     # iterate through all the timepoints 
-                #     for i in range(len(tp_folder)):
-                #         # initialize empty lists
-                #         tp_files_temp_path = []
-                #         tp_files_ses_path = []
-            
+                ### aggregate the samseg output files and move to appropriate directories
                 # write template file paths into a list 
                 output_files = os.listdir(temp_dir_output)
                 # check if fodler is empty or not
