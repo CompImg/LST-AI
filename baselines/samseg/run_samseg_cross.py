@@ -16,8 +16,8 @@ def process_samseg(dirs, derivatives_dir, freesurfer_path, remove_temp=False, co
     for dir in dirs:
 
         ### assemble T1w and FLAIR file lists
-        t1w = sorted(list(Path(dir).rglob('*T1w*')))
-        flair = sorted(list(Path(dir).rglob('*FLAIR*')))
+        t1w = sorted(list(Path(dir).rglob('*T1w.nii.gz')))
+        flair = sorted(list(Path(dir).rglob('*FLAIR.nii.gz')))
         
         # convert entries to string
         t1w = [str(x) for x in t1w]
