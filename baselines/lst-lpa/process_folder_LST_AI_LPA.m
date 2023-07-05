@@ -1,12 +1,7 @@
 function process_folder_LST_AI_LPA(mr_path, batches_path)
-% This script is based on the main database processing script, but has 
-% been adjusted to the requirements of the LST-AI project with Bene:
-% - run the LST-LPA segmentation the same way as LST-LGA in our usual 
-% processing so that we can compare the results to the AI-based segmentation.
-% - therefore only the steps up until the LST segmentation are required 
-% and a binary lesion mask is generated at the end.
-% - requires BIDS conform database
-
+%
+% requires BIDS conform database
+%
 % using CAT (version 12.8.1):
 %
 % 1. CAT Denoising (sanlm): all subfolders of the subject path are taken 
@@ -22,7 +17,11 @@ function process_folder_LST_AI_LPA(mr_path, batches_path)
 % 5. move files: move files to derivatives folder in accordance with BIDS
 %    file structure
 %
-% Inputs: path: This is the subject folder where the images are stored
+% Inputs: 
+% mr_path: This is the subject folder where the FLAIR images are stored
+% batches_path: this is the folder where required matlab batches are stored
+%
+% !! you need to specify the name of the FLAIR files in line 61 !!
 
 % Get a list of all the subfolders in 'path'
 cd(mr_path)
