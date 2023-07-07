@@ -224,7 +224,7 @@ if (exist(path_sf2,'file'))
     path_sf2_deriv_split = strsplit(path_sf2_deriv, '/');
     path_sf2_deriv_dir = strjoin(path_sf2_deriv_split(1:end-1), '/');
     if (~exist(path_sf2_deriv_dir, 'dir'))
-        mkdir(strjoin(path_sf2_deriv_split(1:end-1), '/'))
+        mkdir(path_sf2_deriv_dir)
     end
     % move the denoised FLAIR image to derivatives
     movefile(path_sf2, ...
