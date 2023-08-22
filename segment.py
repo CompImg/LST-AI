@@ -76,7 +76,7 @@ if args.skip_preproc: #In this case, data _must_ be skullstripped and coregister
 
 else:
     #Register T1 -> Atlas_T1
-    atlas_t1 = os.getcwd() + "/sub-mni152_space-mni_t1.nii.gz"
+    atlas_t1 = os.path.join(os.getcwd() , "atlas", "sub-mni152_space-mni_t1.nii.gz")
     rigid_call = [os.getcwd() + "/greedy","-d","3","-a","-dof","6","-m","NMI","-ia-image-centers","-n","100x50x10","-i",atlas_t1,args.t1,"-o",os.getcwd() + "/affine.mat"]
     subprocess.run(rigid_call)
     warp_call = [os.getcwd() + "/greedy","-d","3","-rf",atlas_t1,"-rm",args.t1,os.getcwd()+"/t1_tmp.nii.gz","-r", os.getcwd() + "/affine.mat"]
@@ -123,7 +123,7 @@ t1 = t1.astype(np.float32)
 #Segment
 joint_seg = np.zeros(t1.shape)
 for model in unet_mdls:
-    mdl = tf.keras.models.load_model(os.getcwd() + "/" + model,compile=False)
+    mdl = tf.keras.models.load_model(os.path.join(os.getcwd(), "model", model),compile=False)
 
     img_image = np.stack([f2,t1],axis=-1)
     img_image = np.expand_dims(img_image,axis=0)
