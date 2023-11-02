@@ -25,15 +25,13 @@ from skimage.measure import label
 from skimage.morphology import binary_dilation
 
 
-def annotate_lesions(greedy, atlas_t1, atlas_mask, t1w_native, seg_native, out_atlas_warp,
+def annotate_lesions(atlas_t1, atlas_mask, t1w_native, seg_native, out_atlas_warp,
                      out_atlas_mask_warped, out_annotated_native):
     """
     Annotate lesions in a given image using an atlas.
 
     Parameters:
     -----------
-    greedy: str
-        Path to the greedy registration tool.
     atlas_t1: str
         Path to the atlas T1-weighted image (in MNI space).
     atlas_mask: str
@@ -65,7 +63,7 @@ def annotate_lesions(greedy, atlas_t1, atlas_mask, t1w_native, seg_native, out_a
 
     # Register Atlas -> Patient_T1 using greedy (two-step: rigid first, then deformable)
     deformable_call = (
-        f"{greedy} -d 3 -m WNCC 2x2x2 -sv -n 100x50x10"
+        f"greedy -d 3 -m WNCC 2x2x2 -sv -n 100x50x10"
         f" -i {t1w_native} {atlas_t1}"
         f" -o {out_atlas_warp}"
     )
@@ -73,7 +71,7 @@ def annotate_lesions(greedy, atlas_t1, atlas_mask, t1w_native, seg_native, out_a
 
     # Warp MSmask in patient space
     warp_call = (
-        f"{greedy} -d 3 -rf {t1w_native} -ri LABEL 0.2vox"
+        f"greedy -d 3 -rf {t1w_native} -ri LABEL 0.2vox"
         f" -rm {atlas_mask} {out_atlas_mask_warped}"
         f" -r {out_atlas_warp}"
     )
@@ -118,7 +116,6 @@ if __name__ == "__main__":
 
     lst_dir = os.getcwd()
     parent_directory = os.path.dirname(lst_dir)
-    greedy_path = os.path.join(parent_directory, "binaries", "greedy")
     atlas_t1w_path = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_t1.nii.gz")
     atlas_mask_path = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_msmask.nii.gz")
     out_atlas_warp_path = os.path.join(parent_directory, "warp_field.nii.gz")
@@ -132,8 +129,7 @@ if __name__ == "__main__":
                               "sub-msseg-test-center01-02_ses-01_space-mni_seg-manual.nii.gz")
     annotated_seg_path = os.path.join(parent_directory, "annotated_segmentation.nii.gz")
 
-    annotate_lesions(greedy=greedy_path,
-                     atlas_t1=atlas_t1w_path,
+    annotate_lesions(atlas_t1=atlas_t1w_path,
                      atlas_mask=atlas_mask_path,
                      t1w_native=t1w_native_path,
                      seg_native=seg_native_path,

@@ -15,7 +15,7 @@ import argparse
 from warnings import filterwarnings
 filterwarnings("ignore")
 
-from LST_AI.strip import run_hdbet 
+from LST_AI.strip import run_hdbet
 from LST_AI.register import mni_registration, warp_mni_to_orig, warp_orig_to_mni
 from LST_AI.segment import unet_segmentation
 from LST_AI.annotate import annotate_lesions
@@ -23,7 +23,7 @@ from LST_AI.utils import download_data
 
 if __name__ == "__main__":
 
-    download_data()    
+    download_data()
 
     print("###########################\n")
     print("Thank you for using LST-AI. If you publish your results, please cite our paper.:")
@@ -49,44 +49,44 @@ if __name__ == "__main__":
                         help='Path to output segmentation nifti path.',
                         type=str,
                         required=True)
-   
-    parser.add_argument('--existing_seg',                        
+
+    parser.add_argument('--existing_seg',
                         dest='existing_seg',
                         default='',
                         help='Path to output segmentation image (will be saved in FLAIR space)',
                         type=str)
-    
+
     # Temporary directory
     parser.add_argument('--temp',
                         dest='temp',
                         default='',
                         help='Path to temp directory.',
                         type=str)
-    
+
     # Mode (segment only, annotate only, segment+annotate (default))
-    parser.add_argument('--segment_only',                        
+    parser.add_argument('--segment_only',
                         action='store_true',
                         dest='segment_only',
                         help='Only perform the segmentation, and skip lesion annotation.')
-    
-    parser.add_argument('--annotate_only',                        
+
+    parser.add_argument('--annotate_only',
                         action='store_true',
                         dest='annotate_only',
                         help='Only annotate lesion files without segmentation of lesions.')
-    
-    parser.add_argument('--skull_stripped',                        
+
+    parser.add_argument('--skull_stripped',
                         action='store_true',
                         dest='stripped',
                         help='Images are already skull stripped. Skip skull-stripping.')
-    
+
     # Model Settings
     parser.add_argument('--threshold',
                         dest='threshold',
                         help='Threshold for binarizing the joint segmentation (default: 0.5)',
                         type=float,
                         default=0.5)
-    
-    parser.add_argument('--fast-mode',                        
+
+    parser.add_argument('--fast-mode',
                         action='store_true',
                         dest='fast',
                         help='Only use one model for hd-bet.')
@@ -96,7 +96,7 @@ if __name__ == "__main__":
                         action='store_true',
                         dest='use_gpu',
                         help='Use GPU (for HD-BET and segmentation)')
-    
+
     args = parser.parse_args()
 
     # Sanity Checks
@@ -117,7 +117,7 @@ if __name__ == "__main__":
         working_directory = os.path.abspath(args.temp)
         # make temp directory in case it does not exist
         if not os.path.exists(working_directory):
-            os.makedirs(working_directory)   
+            os.makedirs(working_directory)
 
 
     # 1) Copy and strip NIFTIs if required
@@ -139,7 +139,7 @@ if __name__ == "__main__":
 
     # make output path in case it does not exist
     if not os.path.exists(args.output):
-        os.makedirs(args.output)   
+        os.makedirs(args.output)
 
     print(args.existing_seg)
 
@@ -150,7 +150,7 @@ if __name__ == "__main__":
             print("Existing segmentation does not exist. Aborting.")
             exit()
 
-   
+
     if args.stripped:
         print("Images are provided as skull-stripped images. Skipping HD-BET.")
         shutil.copy(args.t1, path_org_stripped_t1w)
@@ -180,33 +180,30 @@ if __name__ == "__main__":
     t1w_atlas = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_t1.nii.gz")
     t1w_atlas_stripped = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_t1bet.nii.gz")
     atlas_mask = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_msmask.nii.gz")
-    greedy = os.path.join(parent_directory,"binaries", "greedy")
     model_directory = os.path.join(parent_directory, 'model')
 
     # affines
     path_affine_mni_stripped_t1w = os.path.join(working_directory, 'affine_t1w_to_mni.mat')
     path_affine_mni_stripped_flair = os.path.join(working_directory, 'affine_flair_to_mni.mat')
 
-    mni_registration(greedy,
-                     t1w_atlas, 
-                     path_org_stripped_t1w, 
-                     path_org_stripped_flair, 
-                     path_mni_stripped_t1w, 
+    mni_registration(t1w_atlas,
+                     path_org_stripped_t1w,
+                     path_org_stripped_flair,
+                     path_mni_stripped_t1w,
                      path_mni_stripped_flair,
-                     path_affine_mni_stripped_t1w, 
+                     path_affine_mni_stripped_t1w,
                      path_affine_mni_stripped_flair)
-    
-    
+
+
     if args.annotate_only:
         # register mask to MNI space
         print("Warp Mask to MNI Space using flair affine.")
         # we need to warp the original mask first to mni
-        warp_orig_to_mni(greedy=greedy,
-                         image_org_space=path_mni_stripped_flair,
+        warp_orig_to_mni(image_org_space=path_mni_stripped_flair,
                          image_to_mni_affine=path_affine_mni_stripped_flair,
                          seg_mni=path_mni_segmentation,
                          seg_orig=path_orig_segmentation)
-     
+
     # 3) segmentation:
     if not args.annotate_only:
         print("Running LST Segmentation.")
@@ -214,18 +211,17 @@ if __name__ == "__main__":
                           mni_flair=path_mni_stripped_flair,
                           model_path=model_directory,
                           output_segmentation_path=path_mni_segmentation,
-                          input_shape=(192,192,192), 
+                          input_shape=(192,192,192),
                           threshold=args.threshold)
-        
-        warp_mni_to_orig(greedy=greedy,
-                    image_org_space=path_org_stripped_flair,
+
+        warp_mni_to_orig(image_org_space=path_org_stripped_flair,
                     image_to_mni_affine=path_affine_mni_stripped_flair,
                     seg_mni=path_mni_segmentation,
                     seg_orig=path_orig_segmentation)
-        
+
         # store the segmentations
         shutil.copy(path_orig_segmentation, os.path.join(args.output, "space-orig_seg-lst.nii.gz"))
-                                     
+
 
     # 4) Annotate (if required)
 
@@ -234,29 +230,26 @@ if __name__ == "__main__":
     atlas_mask_warped = os.path.join(working_directory,"tmp_mask.nii.gz")
 
     if not args.segment_only:
-        annotate_lesions(greedy=greedy, 
-                         atlas_t1=t1w_atlas, 
-                         atlas_mask=atlas_mask, 
+        annotate_lesions(atlas_t1=t1w_atlas,
+                         atlas_mask=atlas_mask,
                          t1w_native=path_mni_stripped_t1w,
                          seg_native=path_mni_segmentation,
-                         out_atlas_warp=atlas_warp, 
+                         out_atlas_warp=atlas_warp,
                          out_atlas_mask_warped=atlas_mask_warped,
                          out_annotated_native=path_mni_annotated_segmentation)
-        
+
         # warp results back to original space
-        warp_mni_to_orig(greedy=greedy,
-                        image_org_space=path_org_stripped_flair,
+        warp_mni_to_orig(image_org_space=path_org_stripped_flair,
                         image_to_mni_affine=path_affine_mni_stripped_flair,
                         seg_mni=path_mni_annotated_segmentation,
                         seg_orig=path_orig_annotated_segmentation)
-        
+
         # store the segmentations
         shutil.copy(path_orig_annotated_segmentation, os.path.join(args.output, "space-orig_desc-annotated_seg-lst.nii.gz"))
-    
-        
+
+
     print(f"Results in {working_directory}")
     if use_temp:
         print("Delete temporary directory: {working_directory}")
         shutil.rmtree(working_directory)
     print("Done.")
-
