@@ -12,7 +12,7 @@ This repository offers user-friendly access to our newly released LST-AI MS lesi
 Disclaimer: LST-AI is a research-only tool for MS Lesion Segmentation and has not been validated, licensed or approved for any clinical usage.
 
 ## What is different, or: why should I switch?!
-* Over a decade ago, we introduced the [Lesion Segmentation Toolbox (LST)](https://www.applied-statistics.de/lst.html) which has since been cited in over 1000 scholarly papers.
+* Over a decade ago, we introduced the [Lesion Segmentation Toolbox (LST)](https://www.applied-statistics.de/lst.html) which has since been cited in over 800 scholarly papers.
 * Here, we present LST-AI, an advanced deep learning-based extension. LST-AI specifically addresses the imbalance between white matter (WM) lesions and non-lesioned WM. Built on the UNet architecture, it employs a composite loss function incorporating binary cross-entropy and Tversky loss to improve segmentation of the highly heterogeneous MS lesions.
 * Using an ensemble of U-NETs trained on 491 MS pairs of T1w and FLAIR images, LST-AI achives state of the art performance on multiple public MS datasets, and likely generalizes well to your data.
 
