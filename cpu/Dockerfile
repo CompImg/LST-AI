@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Update and install required packages
 RUN apt-get update && apt-get install -y \
     git \
+    wget \
     cmake \
     g++ \
     build-essential \
@@ -17,13 +18,12 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip
 
-# Clone ITK v5.1.2 and build it
-RUN git clone https://github.com/InsightSoftwareConsortium/ITK.git /tmp/ITK && \
-    cd /tmp/ITK && \
-    git checkout v5.1.2 && \
-    mkdir /tmp/ITK-build && cd /tmp/ITK-build && \
-    cmake ../ITK && \
-    cat /tmp/Makefile \
+RUN wget https://github.com/InsightSoftwareConsortium/ITK/archive/refs/tags/v5.2.1.tar.gz && \
+    tar -zxvf v5.2.1.tar.gz && \
+    cd ITK-5.2.1 && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
     make -j$(nproc) && \
     make install
 
