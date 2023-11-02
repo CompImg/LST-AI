@@ -123,11 +123,11 @@ If you haven't already, build your CPU or GPU Docker image:
 
 ```
 cd cpu
-docker build -t lstai:latest .
+docker build -t lst-ai_cpu:latest .
 ```
 ```
 cd gpu
-docker build -t lstai:latest .
+docker build -t lst-ai_gpu:latest .
 ```
 Alternatively you can pull the latest image from dockerhub:
 
