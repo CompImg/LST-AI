@@ -28,6 +28,20 @@ RUN wget https://github.com/InsightSoftwareConsortium/ITK/archive/refs/tags/v5.2
     make -j$(nproc) && \
     make install
 
+# Download and extract VTK 9.1.0
+WORKDIR /opt
+RUN wget https://www.vtk.org/files/release/9.1/VTK-9.1.0.tar.gz
+RUN tar -xf VTK-9.1.0.tar.gz
+
+# Build VTK
+WORKDIR /opt/VTK-9.1.0/build
+RUN cmake .. && \
+    make -j$(nproc) && \
+    make install
+
+# Set up the VTK_DIR environment variable
+ENV VTK_DIR=/usr/local/lib/cmake/vtk-9.1
+
 # Set up the directory tree and clone the greedy repository
 RUN mkdir /custom_apps
 WORKDIR /custom_apps
