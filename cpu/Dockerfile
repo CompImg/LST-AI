@@ -16,7 +16,8 @@ RUN apt-get update && apt-get install -y \
     uuid-dev \
     make \
     python3 \
-    python3-pip
+    python3-pip \
+    libgl1-mesa-dev
 
 RUN wget https://github.com/InsightSoftwareConsortium/ITK/archive/refs/tags/v5.2.1.tar.gz && \
     tar -zxvf v5.2.1.tar.gz && \
