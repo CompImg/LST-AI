@@ -1,10 +1,15 @@
 import os
+import logging
+logging.getLogger('tensorflow').disabled = True
 import nibabel as nib
 import numpy as np
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 import tensorflow_addons as tfa
+#logging.getLogger("tensorflow").setLevel(logging.CRITICAL)
+#logging.getLogger("tensorflow_addons").setLevel(logging.CRITICAL)
 
-def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, input_shape=(192,192,192), threshold=0.5):
+def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, device='cpu', input_shape=(192,192,192), threshold=0.5):
     """
     Segment medical images using ensemble of U-Net models.
 
@@ -37,6 +42,8 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, i
         in `output_segmentation_path`.
 
     """
+
+    tf_device = '/CPU:0' if device == 'cpu' else f'/GPU:{device}'
 
     def adapt_shape(img_arr):
         #Crops input image array to target shape; also returns information how to re-zero-pad
@@ -87,14 +94,17 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, i
     flair = preprocess_intensities(flair)
 
     joint_seg = np.zeros(t1.shape)
+    print(f"Running segmentation on {tf_device}.")
+
     for i, model in enumerate(unet_mdls):
-        print(f"Running model {i}. ")
-        mdl = tf.keras.models.load_model(model, compile=False)
+        with tf.device(tf_device):
+            print(f"Running model {i}. ")
+            mdl = tf.keras.models.load_model(model, compile=False)
 
         img_image = np.stack([flair, t1], axis=-1)
         img_image = np.expand_dims(img_image, axis=0)
-
-        out_seg = mdl(img_image)[0]  # Will return a len(2) list of [out_seg, out_ds]
+        with tf.device(tf_device):
+            out_seg = mdl(img_image)[0]  # Will return a len(2) list of [out_seg, out_ds]
         out_seg = np.squeeze(out_seg)
 
         out_binary = np.zeros(t1.shape)

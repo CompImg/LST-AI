@@ -1,29 +1,20 @@
 import subprocess
 import shlex
+import nibabel as nib
+import numpy as np
 
-def run_hdbet(input_image, output_image, use_gpu=False, fast_mode=False):
-    if use_gpu:
-        device = '1'
+def run_hdbet(input_image, output_image, device, mode="accurate"):
+    assert mode in ["accurate","fast"], 'Unkown HD-BET mode. Please choose either "accurate" or "fast"'
+
+    if "cpu" in str(device).lower():
+        bet_call = f"hd-bet -i {input_image} -device cpu -mode {mode} -tta 0 -o {output_image}"
     else:
-        device = 'cpu'
+        bet_call = f"hd-bet -i {input_image} -device {device} -mode accurate -tta 1 -o {output_image}"
 
-    if fast_mode:
-        mode = 'fast'
-    else:
-        mode = 'accurate'
-
-    bet_call = f"hd-bet -i {input_image} -device {device} -mode {mode} -tta 0 -o {output_image}"
     subprocess.run(shlex.split(bet_call), check=True)
 
-    # check @Bene if this is required
-    """
-    brain_mask_arr = nib.load(atlas_mask).get_fdata()
-
-    flair_nib = nib.load(mni_flair)
-    flair_arr = np.multiply(flair_nib.get_fdata(), brain_mask_arr)
-    nib.save(nib.Nifti1Image(flair_arr.astype(np.float32), flair_nib.affine, flair_nib.header), mni_flair)
-
-    t1_nib = nib.load(mni_t1)
-    t1_arr = np.multiply(t1_nib.get_fdata(), brain_mask_arr)
-    nib.save(nib.Nifti1Image(t1_arr.astype(np.float32), t1_nib.affine, t1_nib.header), mni_t1)
-    """
+def apply_mask(input_image, mask, output_image):
+    brain_mask_arr = nib.load(mask).get_fdata()
+    image_nib = nib.load(input_image)
+    image_arr = np.multiply(image_nib.get_fdata(), brain_mask_arr)
+    nib.save(nib.Nifti1Image(image_arr.astype(np.float32), image_nib.affine, image_nib.header), output_image)

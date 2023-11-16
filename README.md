@@ -1,10 +1,8 @@
-# LST-AI - Meet the deep learning-based successor to LST
+# LST-AI - Deep Learning Ensemble for Accurate MS Lesion Segmentation
 
 [![DOI](https://img.shields.io/badge/arXiv-https%3A%2F%2Fdoi.org%2F10.48550%2FarXiv.2303.15065-B31B1B)](https://doi.org/10.48550/arXiv.2303.15065) [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
-Welcome to our codebase for LST-AI, the deep learning based successor of the original [Lesion Segmentation Toolbox (LST)](https://www.applied-statistics.de/lst.html) by [Schmidt et al.](https://www.sciencedirect.com/science/article/abs/pii/S1053811911013139).
-
-This repository offers user-friendly access to our newly released LST-AI MS lesion segmentation and annotation tool. LST-AI was collaboratively developed by the Department of Neurology, Department of Neuroradiology, Klinikum rechts der Isar at the Technical University of Munich, and the Department of Computer Science at the Technical University of Munich.
+Welcome to our codebase for LST-AI, the deep learning based successor of the original [Lesion Segmentation Toolbox (LST)](https://www.applied-statistics.de/lst.html) by [Schmidt et al.](https://www.sciencedirect.com/science/article/abs/pii/S1053811911013139) LST-AI was collaboratively developed by the Department of Neurology, Department of Neuroradiology, Klinikum rechts der Isar at the Technical University of Munich, and the Department of Computer Science at the Technical University of Munich. This repository offers user-friendly access to our newly released LST-AI MS lesion segmentation and annotation tool.
 
 <img src="figures/header.png" alt="Overview" width="1000" height="600" title="Meet LST-AI.">
 
@@ -12,12 +10,12 @@ This repository offers user-friendly access to our newly released LST-AI MS lesi
 Disclaimer: LST-AI is a research-only tool for MS Lesion Segmentation and has not been validated, licensed or approved for any clinical usage.
 
 ## What is different, or: why should I switch?!
-* Over a decade ago, we introduced the [Lesion Segmentation Toolbox (LST)](https://www.applied-statistics.de/lst.html) which has since been cited in over 800 scholarly papers.
-* Here, we present LST-AI, an advanced deep learning-based extension. LST-AI specifically addresses the imbalance between white matter (WM) lesions and non-lesioned WM. Built on the UNet architecture, it employs a composite loss function incorporating binary cross-entropy and Tversky loss to improve segmentation of the highly heterogeneous MS lesions.
-* Using an ensemble of U-NETs trained on 491 MS pairs of T1w and FLAIR images, LST-AI achives state of the art performance on multiple public MS datasets, and likely generalizes well to your data.
+* Here, we present LST-AI, an advanced deep learning-based extension of the original LST with improved performance and additional features.
+* LST-AI constitutes a completely new framework and has been developed from scratch.
+* While LST depends on MATLAB, we offer LST-AI as a python-based tool which makes it available to the whole community.
 
 ## Usage
-To allow the usage of LST-AI on different platforms and online-/offline usage, we provide LST-AI as a python package, CPU-Docker and GPU-Docker.
+To allow the usage of LST-AI on different platforms and online-/offline usage, we provide LST-AI as a python package and Docker (CPU and GPU-Docker versions available).
 
 ### Installing the python package
 
@@ -36,24 +34,30 @@ python3-pip
 ```
 
 Under the hood, LST also wraps [HD-BET](https://github.com/MIC-DKFZ/HD-BET) and [greedy](https://github.com/pyushkevich/greedy).
-We guide you through the compilation for greedy and the installation for HD-BET in the following process. If you encounter issues specifically with these packages, let us know in an issue and/or consult the respective github repositories.
+We guide you through the download / compilation for greedy and the installation for HD-BET in the following process. If you encounter issues specifically with these packages, let us know in an issue and/or consult the respective github repositories.
 
-1. We recommend setting up a virtual environment for LST-AI:
+1. Make a new directory for LST-AI
+```bash
+mkdir lst_directory
+cd lst_directory
+```
 
+2. We recommend setting up a virtual environment for LST-AI:
 ```
 python3 -m venv /path/to/new/lst/virtual/environment
 ```
 
-2. Activate your new environment, e.g. `(lst_env)`
-
+3. Activate your new environment, i.e. `(lst_env)`
 ```
 source /path/to/new/lst/virtual/environment/bin/activate
 ```
 
-3. Make a directory where you are planning to store all files related to LST-AI.
+4. Install LST-AI (and yeah, with `pip -e` option!):
 ```bash
-mkdir lst_directory
-cd lst_directory
+git clone https://github.com/jqmcginnis/LST-AI
+cd LST-AI
+pip install -e .
+cd ..
 ```
 
 4. Install [HD-BET](https://github.com/MIC-DKFZ/HD-BET)
@@ -63,27 +67,50 @@ git clone https://github.com/MIC-DKFZ/HD-BET
 ```
 cd HD-BET
 pip install -e .
+cd ..
 ```
 
-5. Compile and install greedy for your platform
-```bash
-git clone https://github.com/pyushkevich/greedy
-mkdir build
-cd build
-ccmake ../greedy
-```
+6. Download or Compile and install greedy for your platform
+  * 6.1 (Variant A): Download the built greedy tool and place into structure
+    1) Download the tool
+    ```bash
+    wget "https://syncandshare.lrz.de/dl/fi65b93EmVE42LPbRtoVgR/greedy"
+    ```
+    2) and ensure it is a findable path:
+    ```bash
+    chmod +x greedy
+    mkdir ~/bin
+    mv greedy ~/bin
+    export PATH="$HOME/bin:$PATH"
+    ```
+    Naturally, you can place the binary in ANY directory if you add it to your `.bashrc` and export the location to the `$PATH`.
+  * 6.2 (Variant B): Compile, make and install the greedy tool (you will need to install both, VTK and ITK)
+    ```
+    wget https://github.com/InsightSoftwareConsortium/ITK/archive/refs/tags/v5.2.1.tar.gz
+    tar -zxvf v5.2.1.tar.gz
+    cd ITK-5.2.1
+    mkdir build
+    cd build
+    cmake ..
+    make -j$(nproc)
+    make install
 
-6. Install LST-AI:
-```bash
-git clone https://github.com/CompImg/lst.ai
-cd LST-AI
-pip install .
-```
+    wget https://www.vtk.org/files/release/9.1/VTK-9.1.0.tar.gz
+    tar -xf VTK-9.1.0.tar.gz
+    cmake ..
+    make -j$(nproc)
+    make install
+
+    git clone https://github.com/pyushkevich/greedy greedy
+    cmake ../greedy
+    make -j$(nproc)
+    make install
+    ```
 
 ### Usage of LST-AI
 
 Once installed, lst can be used as a simple command line tool. LST-AI expects you to provide **zipped NIFTIs (*.nii.gz)** as input
-and assumes the input images **NOT** to be **skull-stripped**. If you already have skull-strips, **do not forget** to privde the **--skull-stripped** option, otherwise the segmentation performance will be likely impacted.
+and assumes the input images **NOT** to be **skull-stripped**. If you already have skull-strips, **do not forget** to provide the **--skull-stripped** option, otherwise the segmentation performance will be likely impacted.
 
 LST requires you to provide a `--t1` T1w and `--flair` FLAIR image, and to specify an output path for the segmentation results `--output`.
 
@@ -119,6 +146,11 @@ we understand that some researchers prefer to use lst-ai offline. Thus, we decid
 Once you have built your Docker image, using the Dockerfile provided, you can run the container using the docker run command. Here are the steps to bind mount your files and retrieve the results:
 
 #### Build the Docker Image
+Clone the repository:
+```bash
+git clone https://github.com/jqmcginnis/LST-AI
+cd LST-AI
+```
 If you haven't already, build your CPU or GPU Docker image:
 
 ```

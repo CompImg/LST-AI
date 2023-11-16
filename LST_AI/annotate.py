@@ -106,7 +106,7 @@ def annotate_lesions(atlas_t1, atlas_mask, t1w_native, seg_native, out_atlas_war
         else:
             seg[temp_mask == 1] = 3  # SC
 
-    # Saving & warping back to FLAIR space
+    # Saving & warping back to T1w space
     nib.save(nib.Nifti1Image(seg.astype(np.uint8),
                              seg_nib.affine, seg_nib.header),
                              out_annotated_native)

@@ -3,14 +3,14 @@ import os
 import zipfile
 from urllib import request
 
-def download_data():
+def download_data(path):
     """
     Downloads required model weights, binaries and atlas files for usage.
     """
     url = "https://syncandshare.lrz.de/dl/fiPiTmWKv5Ga4S7YA7TNks/.dir"
 
     target_path = "data.zip"
-    extract_path = os.getcwd()  # This is the base directory.
+    extract_path = path  # This is the base directory.
 
     atlas_path = os.path.join(extract_path, 'atlas')
     binary_path = os.path.join(extract_path, 'binaries')
@@ -21,7 +21,7 @@ def download_data():
 
     # Check if all paths exist.
     if not all(os.path.exists(path) for path in paths_to_check):
-
+        print("Downloading data...")
         # Download the zip file if it doesn't exist.
         if not os.path.exists(target_path):
             with request.urlopen(url) as response, open(target_path, 'wb') as out_file:
@@ -34,3 +34,4 @@ def download_data():
 
         # Remove the ZIP file after extracting its contents.
         os.remove(target_path)
+        print("Completed.")

@@ -9,21 +9,21 @@ REQUIRES
 > Model files
 """
 import os
+import multiprocessing
+import sys
 import tempfile
 import shutil
 import argparse
 from warnings import filterwarnings
 filterwarnings("ignore")
 
-from LST_AI.strip import run_hdbet
-from LST_AI.register import mni_registration, warp_mni_to_orig, warp_orig_to_mni
+from LST_AI.strip import run_hdbet, apply_mask
+from LST_AI.register import mni_registration, apply_warp, rigid_reg
 from LST_AI.segment import unet_segmentation
 from LST_AI.annotate import annotate_lesions
 from LST_AI.utils import download_data
 
 if __name__ == "__main__":
-
-    download_data()
 
     print("###########################\n")
     print("Thank you for using LST-AI. If you publish your results, please cite our paper.:")
@@ -74,7 +74,7 @@ if __name__ == "__main__":
                         dest='annotate_only',
                         help='Only annotate lesion files without segmentation of lesions.')
 
-    parser.add_argument('--skull_stripped',
+    parser.add_argument('--stripped',
                         action='store_true',
                         dest='stripped',
                         help='Images are already skull stripped. Skip skull-stripping.')
@@ -92,12 +92,22 @@ if __name__ == "__main__":
                         help='Only use one model for hd-bet.')
 
     # Computing Resources
-    parser.add_argument('--use_gpu',
-                        action='store_true',
-                        dest='use_gpu',
-                        help='Use GPU (for HD-BET and segmentation)')
+    parser.add_argument('--device',
+                        dest='device',
+                        help='Either int for GPU ID or "cpu" for CPU (default: 0)',
+                        type=str,
+                        default='cpu')
+
+    parser.add_argument('--threads',
+                        dest='threads',
+                        help='Number of threads to be used for registration (default: all available)',
+                        type=int,
+                        default=multiprocessing.cpu_count())
 
     args = parser.parse_args()
+
+    print(f"Looking for model weights in {os.path.dirname(__file__)}.")
+    download_data(path=os.path.dirname(__file__))
 
     # Sanity Checks
     assert os.path.exists(args.t1), 'LST.AI aborted. T1w Image Path does not exist.'
@@ -106,150 +116,239 @@ if __name__ == "__main__":
     assert str(args.flair).endswith(".nii.gz"), 'Please provide FLAIR as a zipped nifti.'
     assert not os.path.isfile(args.output), 'Please provide an output path, not a filename.'
 
-    # Create a temporary directory if non is given
-    use_temp = False
-
     if not args.temp:
-        working_directory = tempfile.mkdtemp(prefix='lst_ai_')
-        print(f'Using {working_directory} as a temporary working directory.')
-        use_temp = True
+        work_dir = tempfile.mkdtemp(prefix='lst_ai_')
     else:
-        working_directory = os.path.abspath(args.temp)
+        work_dir = os.path.abspath(args.temp)
         # make temp directory in case it does not exist
-        if not os.path.exists(working_directory):
-            os.makedirs(working_directory)
+        if not os.path.exists(work_dir):
+            os.makedirs(work_dir)
 
+    #  Define Image Paths (original space)
+    path_org_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-orig_T1w.nii.gz')
+    path_org_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-orig_FLAIR.nii.gz')
+    path_org_stripped_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-orig_desc-stripped_T1w.nii.gz')
+    path_org_stripped_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-orig_desc-stripped_FLAIR.nii.gz')
 
-    # 1) Copy and strip NIFTIs if required
+    #  Define Image Paths (MNI space)
+    path_mni_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_T1w.nii.gz')
+    path_mni_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_FLAIR.nii.gz')
+    path_mni_stripped_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_desc-stripped_T1w.nii.gz')
+    path_mni_stripped_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_desc-stripped_FLAIR.nii.gz')
 
-    path_org_t1w = os.path.join(working_directory, 'sub-X_ses-Y_space-orig_T1w.nii.gz')
-    path_org_flair = os.path.join(working_directory, 'sub-X_ses-Y_space-orig_FLAIR.nii.gz')
+    # Masks
+    path_orig_brainmask_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-org_T1w_mask.nii.gz')
+    path_orig_brainmask_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-org_FLAIR_mask.nii.gz')
+    path_mni_brainmask = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_brainmask.nii.gz')
 
-    path_org_stripped_t1w = os.path.join(working_directory, 'sub-X_ses-Y_space-orig_desc-stripped_T1w.nii.gz')
-    path_org_stripped_flair = os.path.join(working_directory, 'sub-X_ses-Y_space-orig_desc-stripped_FLAIR.nii.gz')
+    # Segmentation results
+    path_orig_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-orig_seg.nii.gz')
+    path_mni_segmentation = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_seg.nii.gz')
+    path_orig_annotated_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-orig_seg-annotated.nii.gz')
+    path_mni_annotated_segmentation = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_seg-annotated.nii.gz')
 
-    path_mni_stripped_t1w = os.path.join(working_directory, 'sub-X_ses-Y_space-mni_desc-stripped_T1w.nii.gz')
-    path_mni_stripped_flair = os.path.join(working_directory, 'sub-X_ses-Y_space-mni_desc-stripped_FLAIR.nii.gz')
+    # affines
+    path_affine_mni_t1w = os.path.join(work_dir, 'affine_t1w_to_mni.mat')
+    path_affine_mni_flair = os.path.join(work_dir, 'affine_flair_to_mni.mat')
 
-    path_orig_segmentation =  os.path.join(working_directory, 'sub-X_ses-Y_space-orig_seg.nii.gz')
-    path_mni_segmentation = os.path.join(working_directory, 'sub-X_ses-Y_space-mni_seg.nii.gz')
+    # directories
+    lst_dir = os.path.dirname(__file__)
+    parent_dir = os.path.dirname(__file__)
 
-    path_orig_annotated_segmentation =  os.path.join(working_directory, 'sub-X_ses-Y_space-orig_seg-annotated.nii.gz')
-    path_mni_annotated_segmentation = os.path.join(working_directory, 'sub-X_ses-Y_space-mni_seg-annotated.nii.gz')
+    # atlas files
+    t1w_atlas = os.path.join(parent_dir, "atlas", "sub-mni152_space-mni_t1.nii.gz")
+    t1w_atlas_stripped = os.path.join(parent_dir, "atlas", "sub-mni152_space-mni_t1bet.nii.gz")
+    atlas_mask = os.path.join(parent_dir, "atlas", "sub-mni152_space-mni_msmask.nii.gz")
+    atlas_t1 = t1w_atlas
+    atlas_warp = os.path.join(work_dir, "atlas_warp_field.nii.gz")
+    atlas_mask_warped = os.path.join(work_dir,"atlas_mask_warped.nii.gz")
 
-    # make output path in case it does not exist
+    # model weights
+    model_directory = os.path.join(parent_dir, 'model')
+
+    # make output path (in case it does not exist)
     if not os.path.exists(args.output):
         os.makedirs(args.output)
 
-    print(args.existing_seg)
+    if os.path.isfile(args.existing_seg) and not args.annotate_only:
+        print("Existing segmentation may only be used with --annotate_only flag.")
+        print("Aborted.")
+        sys.exit(1)
 
+    # Annotation only
     if args.annotate_only:
         if os.path.isfile(args.existing_seg):
             shutil.copy(args.existing_seg, path_orig_segmentation)
         else:
-            print("Existing segmentation does not exist. Aborting.")
-            exit()
+            print("Existing segmentation does not exist.")
+            print("Please provide a valid path via --existing_seg.")
+            sys.exit(1)
+
+        # Register T1w to FLAIR native
+        t1w_native= os.path.join(work_dir,"T1w.nii.gz")
+        native_affine = os.path.join(work_dir,"affine_native_t1_flair.mat")
+        shutil.copy(args.t1, t1w_native)
+
+        if not args.stripped:
+
+            shutil.copy(args.flair, path_org_flair)
+            rigid_reg(moving=t1w_native,
+                    fixed=path_org_flair,
+                    affine=native_affine,
+                    destination=path_org_t1w,
+                    n_threads=args.threads)
+
+            # strip only T1w
+            if args.fast:
+                run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device, mode="fast")
+            else:
+                run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device, mode="accurate")
+
+            # move processed mask to correct naming convention
+            hdbet_mask = path_org_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
+            shutil.move(hdbet_mask, path_orig_brainmask_flair)
+
+            # apply brain mask to FLAIR
+            apply_mask(input_image=path_org_flair,
+                    mask=path_orig_brainmask_flair,
+                    output_image=path_org_stripped_flair)
+        else:
+            shutil.copy(args.flair, path_org_stripped_flair)
+            rigid_reg(moving=t1w_native,
+                    fixed=path_org_stripped_flair,
+                    affine=native_affine,
+                    destination=path_org_stripped_t1w,
+                    n_threads=args.threads)
 
 
-    if args.stripped:
-        print("Images are provided as skull-stripped images. Skipping HD-BET.")
-        shutil.copy(args.t1, path_org_stripped_t1w)
-        shutil.copy(args.flair, path_org_stripped_flair)
+        annotate_lesions(atlas_t1=t1w_atlas,
+                        atlas_mask=atlas_mask,
+                        t1w_native=path_org_stripped_t1w,
+                        seg_native=path_orig_segmentation,
+                        out_atlas_warp=atlas_warp,
+                        out_atlas_mask_warped=atlas_mask_warped,
+                        out_annotated_native=path_orig_annotated_segmentation)
 
+        shutil.copy(path_orig_annotated_segmentation,
+                    os.path.join(args.output, "space-orig_desc-annotated_seg-lst.nii.gz"))
+
+
+    # Segmentation only + (opt. Annotation)
     else:
-        print("Images need to be skull-stripped. Processing with HD-BET.")
-        shutil.copy(args.t1, path_org_t1w)
-        shutil.copy(args.flair, path_org_flair)
 
-        if args.use_gpu:
-            gpu = True
+        if args.stripped:
+            print("Images have been provided as skull-stripped images. Skipping skull-stripping via HD-BET.")
+            shutil.copy(args.t1, path_org_stripped_t1w)
+            shutil.copy(args.flair, path_org_stripped_flair)
+
+            mni_registration(t1w_atlas_stripped,
+                            path_org_stripped_t1w,
+                            path_org_stripped_flair,
+                            path_mni_stripped_t1w,
+                            path_mni_stripped_flair,
+                            path_affine_mni_t1w,
+                            path_affine_mni_flair,
+                            n_threads=args.threads)
+
         else:
-            gpu = False
+            print("Images need to be skull-stripped. Processing with HD-BET.")
+            shutil.copy(args.t1, path_org_t1w)
+            shutil.copy(args.flair, path_org_flair)
 
-        if args.fast:
-            run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, use_gpu=gpu, fast_mode=True)
-            run_hdbet(input_image=path_org_flair, output_image=path_org_stripped_flair, use_gpu=gpu, fast_mode=True)
-        else:
-            run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, use_gpu=gpu, fast_mode=False)
-            run_hdbet(input_image=path_org_flair, output_image=path_org_stripped_flair, use_gpu=gpu, fast_mode=False)
+            # first register to MNI space
+            mni_registration(t1w_atlas,
+                            path_org_t1w,
+                            path_org_flair,
+                            path_mni_t1w,
+                            path_mni_flair,
+                            path_affine_mni_t1w,
+                            path_affine_mni_flair,
+                            n_threads=args.threads)
 
-    # 2) Register Images to Atlas
+            # then skull strip T1w
+            if args.fast:
+                run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device, mode="fast")
+            else:
+                run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device, mode="accurate")
 
-    lst_dir = os.getcwd()
-    parent_directory = os.path.dirname(lst_dir)
-    t1w_atlas = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_t1.nii.gz")
-    t1w_atlas_stripped = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_t1bet.nii.gz")
-    atlas_mask = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_msmask.nii.gz")
-    model_directory = os.path.join(parent_directory, 'model')
+            # move processed mask to correct naming convention
+            hdbet_mask = path_mni_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
+            print(hdbet_mask)
+            shutil.copy(hdbet_mask, path_mni_brainmask)
 
-    # affines
-    path_affine_mni_stripped_t1w = os.path.join(working_directory, 'affine_t1w_to_mni.mat')
-    path_affine_mni_stripped_flair = os.path.join(working_directory, 'affine_flair_to_mni.mat')
+            # then apply brain mask to FLAIR
+            apply_mask(input_image=path_mni_flair,
+                    mask=path_mni_brainmask,
+                    output_image=path_mni_stripped_flair)
 
-    mni_registration(t1w_atlas,
-                     path_org_stripped_t1w,
-                     path_org_stripped_flair,
-                     path_mni_stripped_t1w,
-                     path_mni_stripped_flair,
-                     path_affine_mni_stripped_t1w,
-                     path_affine_mni_stripped_flair)
+            # create masked images in original space
+            apply_warp(image_org_space=path_org_t1w,
+                        affine=path_affine_mni_t1w,
+                        origin=path_mni_brainmask,
+                        target=path_orig_brainmask_t1w,
+                        reverse=True,
+                        n_threads=args.threads)
+
+            apply_warp(image_org_space=path_org_flair,
+                        affine=path_affine_mni_flair,
+                        origin=path_mni_brainmask,
+                        target=path_orig_brainmask_flair,
+                        reverse=True,
+                        n_threads=args.threads)
+
+            apply_mask(input_image=path_org_t1w,
+                        mask=path_orig_brainmask_t1w,
+                        output_image=path_org_stripped_t1w)
+
+            apply_mask(input_image=path_org_flair,
+                        mask=path_orig_brainmask_flair,
+                        output_image=path_org_stripped_flair)
 
 
-    if args.annotate_only:
-        # register mask to MNI space
-        print("Warp Mask to MNI Space using flair affine.")
-        # we need to warp the original mask first to mni
-        warp_orig_to_mni(image_org_space=path_mni_stripped_flair,
-                         image_to_mni_affine=path_affine_mni_stripped_flair,
-                         seg_mni=path_mni_segmentation,
-                         seg_orig=path_orig_segmentation)
-
-    # 3) segmentation:
-    if not args.annotate_only:
+        # Segmentation
         print("Running LST Segmentation.")
         unet_segmentation(mni_t1=path_mni_stripped_t1w,
-                          mni_flair=path_mni_stripped_flair,
-                          model_path=model_directory,
-                          output_segmentation_path=path_mni_segmentation,
-                          input_shape=(192,192,192),
-                          threshold=args.threshold)
+                        mni_flair=path_mni_stripped_flair,
+                        model_path=model_directory,
+                        output_segmentation_path=path_mni_segmentation,
+                        device=args.device,
+                        input_shape=(192,192,192),
+                        threshold=args.threshold)
 
-        warp_mni_to_orig(image_org_space=path_org_stripped_flair,
-                    image_to_mni_affine=path_affine_mni_stripped_flair,
-                    seg_mni=path_mni_segmentation,
-                    seg_orig=path_orig_segmentation)
+        apply_warp(image_org_space=path_org_stripped_flair,
+                    affine=path_affine_mni_flair,
+                    target=path_orig_segmentation,
+                    origin=path_mni_segmentation,
+                    reverse=True,
+                    n_threads=args.threads)
 
         # store the segmentations
         shutil.copy(path_orig_segmentation, os.path.join(args.output, "space-orig_seg-lst.nii.gz"))
 
+        # Annotation
+        if not args.segment_only:
+            annotate_lesions(atlas_t1=t1w_atlas,
+                            atlas_mask=atlas_mask,
+                            t1w_native=path_mni_stripped_t1w,
+                            seg_native=path_mni_segmentation,
+                            out_atlas_warp=atlas_warp,
+                            out_atlas_mask_warped=atlas_mask_warped,
+                            out_annotated_native=path_mni_annotated_segmentation)
 
-    # 4) Annotate (if required)
+            # warp results back to original FLAIR space
+            apply_warp(image_org_space=path_org_stripped_flair,
+                        affine=path_affine_mni_flair,
+                        origin=path_mni_annotated_segmentation,
+                        target=path_orig_annotated_segmentation,
+                        reverse=True,
+                        n_threads=args.threads)
 
-    atlas_t1 = t1w_atlas
-    atlas_warp = os.path.join(working_directory, "warp_field.nii.gz")
-    atlas_mask_warped = os.path.join(working_directory,"tmp_mask.nii.gz")
-
-    if not args.segment_only:
-        annotate_lesions(atlas_t1=t1w_atlas,
-                         atlas_mask=atlas_mask,
-                         t1w_native=path_mni_stripped_t1w,
-                         seg_native=path_mni_segmentation,
-                         out_atlas_warp=atlas_warp,
-                         out_atlas_mask_warped=atlas_mask_warped,
-                         out_annotated_native=path_mni_annotated_segmentation)
-
-        # warp results back to original space
-        warp_mni_to_orig(image_org_space=path_org_stripped_flair,
-                        image_to_mni_affine=path_affine_mni_stripped_flair,
-                        seg_mni=path_mni_annotated_segmentation,
-                        seg_orig=path_orig_annotated_segmentation)
-
-        # store the segmentations
-        shutil.copy(path_orig_annotated_segmentation, os.path.join(args.output, "space-orig_desc-annotated_seg-lst.nii.gz"))
+            # store the segmentations
+            shutil.copy(path_orig_annotated_segmentation, os.path.join(args.output, "space-orig_desc-annotated_seg-lst.nii.gz"))
 
 
-    print(f"Results in {working_directory}")
-    if use_temp:
-        print("Delete temporary directory: {working_directory}")
-        shutil.rmtree(working_directory)
+    print(f"Results in {work_dir}")
+    if not args.temp:
+        print("Delete temporary directory: {work_dir}")
+        shutil.rmtree(work_dir)
     print("Done.")
