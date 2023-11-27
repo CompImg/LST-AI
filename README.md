@@ -138,7 +138,7 @@ We provide three different modes:
 ### Dockerfile and Dockerhub
 
 While the installation and usage requires internet access to install python packages and to download the weights and atlas,
-we understand that some researchers prefer to use lst-ai offline. Thus, we decided to provide lst-ai as a CPU-/GPU-enabled docker container, which can be (1) compiled using our scripts or (2) downloaded from [Dockerhub](https://hub.docker.com/u/jqmcginnis).
+we understand that some researchers prefer to use lst-ai offline. Thus, we decided to provide lst-ai as a CPU-/GPU-enabled docker container, which can be compiled using our scripts.
 
 ### Running the LST-AI Docker Container
 Once you have built your Docker image, using the Dockerfile provided, you can run the container using the docker run command. Here are the steps to bind mount your files and retrieve the results:
