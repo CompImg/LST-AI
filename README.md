@@ -200,13 +200,16 @@ We invite you to tailor LST-AI to your pipeline and application, please have a l
 
 If you use our tool, please cite us:
 ```
-@inproceedings{iamaplaceholder,
-  title={Single-subject Multi-contrast MRI Super-resolution via Implicit Neural Representations},
-  author={McGinnis, Julian and Shit, Suprosanna and Li, Hongwei Bran and Sideri-Lampretsa, Vasiliki and Graf, Robert and Dannecker, Maik and Pan, Jiazhen and Stolt-Ans{\'o}, Nil and M{\"u}hlau, Mark and Kirschke, Jan S and others},
-  booktitle={International Conference on Medical Image Computing and Computer-Assisted Intervention},
-  pages={173--183},
-  year={2023},
-  organization={Springer}
+@article {Wiltgen2023.11.23.23298966,
+	author = {Tun Wiltgen and Julian McGinnis and Sarah Schlaeger and CuiCi Voon and Achim Berthele and Daria Bischl and Lioba Grundl and Nikolaus Will and Marie Metz and David Schinz and Dominik Sepp and Philipp Prucker and Benita Schmitz-Koep and Claus Zimmer and Bjoern Menze and Daniel Rueckert and Bernhard Hemmer and Jan Kirschke and Mark Muehlau and Benedikt Wiestler},
+	title = {LST-AI: a Deep Learning Ensemble for Accurate MS Lesion Segmentation},
+	elocation-id = {2023.11.23.23298966},
+	year = {2023},
+	doi = {10.1101/2023.11.23.23298966},
+	publisher = {Cold Spring Harbor Laboratory Press},
+	URL = {https://www.medrxiv.org/content/early/2023/11/24/2023.11.23.23298966},
+	eprint = {https://www.medrxiv.org/content/early/2023/11/24/2023.11.23.23298966.full.pdf},
+	journal = {medRxiv}
 }
 ```
 
