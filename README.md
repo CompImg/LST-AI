@@ -1,6 +1,6 @@
 # LST-AI - Deep Learning Ensemble for Accurate MS Lesion Segmentation
 
-[![DOI](https://img.shields.io/badge/arXiv-https%3A%2F%2Fdoi.org%2F10.48550%2FarXiv.2303.15065-B31B1B)]([[https://doi.org/10.48550/arXiv.2303.15065](https://www.medrxiv.org/content/10.1101/2023.11.23.23298966v1)](https://www.medrxiv.org/content/10.1101/2023.11.23.23298966v1)) [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+[![DOI](https://img.shields.io/badge/arXiv-https%3A%2F%2Fdoi.org%2F10.48550%2FarXiv.2303.15065-B31B1B)]([https://doi.org/10.48550/arXiv.2303.15065](https://www.medrxiv.org/content/10.1101/2023.11.23.23298966v1)](https://www.medrxiv.org/content/10.1101/2023.11.23.23298966v1) [![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
 
 Welcome to our codebase for LST-AI, the deep learning based successor of the original [Lesion Segmentation Toolbox (LST)](https://www.applied-statistics.de/lst.html) by [Schmidt et al.](https://www.sciencedirect.com/science/article/abs/pii/S1053811911013139) LST-AI was collaboratively developed by the Department of Neurology, Department of Neuroradiology, Klinikum rechts der Isar at the Technical University of Munich, and the Department of Computer Science at the Technical University of Munich. This repository offers user-friendly access to our newly released LST-AI MS lesion segmentation and annotation tool.
 
