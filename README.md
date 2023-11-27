@@ -188,7 +188,7 @@ We invite you to tailor LST-AI to your pipeline and application, please have a l
 
 If you use our tool, please cite us:
 ```
-@article {Wiltgen2023.11.23.23298966,
+@article{Wiltgen2023lst,
 	author = {Tun Wiltgen and Julian McGinnis and Sarah Schlaeger and CuiCi Voon and Achim Berthele and Daria Bischl and Lioba Grundl and Nikolaus Will and Marie Metz and David Schinz and Dominik Sepp and Philipp Prucker and Benita Schmitz-Koep and Claus Zimmer and Bjoern Menze and Daniel Rueckert and Bernhard Hemmer and Jan Kirschke and Mark Muehlau and Benedikt Wiestler},
 	title = {LST-AI: a Deep Learning Ensemble for Accurate MS Lesion Segmentation},
 	elocation-id = {2023.11.23.23298966},
