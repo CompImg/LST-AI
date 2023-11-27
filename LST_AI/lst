@@ -26,10 +26,10 @@ from LST_AI.utils import download_data
 if __name__ == "__main__":
 
     print("###########################\n")
-    print("Thank you for using LST-AI. If you publish your results, please cite our paper.:")
+    print("Thank you for using LST-AI. If you publish your results, please cite our paper:")
     print("Wiltgen T, McGinnis J, Schlaeger S, Voon C, Berthele A, Bischl D, Grundl L, Will N, Metz M, Schinz D, Sepp D,"
-      "Prucker P, Schmitz-Koep B, Zimmer C, Menze B, Rueckert D, Hemmer B, Kirschke J, Muehlau M, Wiestler B."
-      "LST-AI: a Deep Learning Ensemble for Accurate MS Lesion Segmentation. medRxiv preprint 10.1101/2023.11.23.23298966,"
+      "Prucker P, Schmitz-Koep B, Zimmer C, Menze B, Rueckert D, Hemmer B, Kirschke J, Muehlau M, Wiestler B. "
+      "LST-AI: a Deep Learning Ensemble for Accurate MS Lesion Segmentation. medRxiv preprint 10.1101/2023.11.23.23298966, "
       "2023.")
     print("###########################\n")
 
