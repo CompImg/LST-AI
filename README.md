@@ -52,7 +52,7 @@ source /path/to/new/lst/virtual/environment/bin/activate
 
 4. Install LST-AI (and yeah, with `pip -e` option!):
 ```bash
-git clone https://github.com/jqmcginnis/LST-AI
+git clone https://github.com/CompImg/LST-AI/
 cd LST-AI
 pip install -e .
 cd ..
@@ -146,7 +146,7 @@ Once you have built your Docker image, using the Dockerfile provided, you can ru
 #### Build the Docker Image
 Clone the repository:
 ```bash
-git clone https://github.com/jqmcginnis/LST-AI
+git clone https://github.com/CompImg/LST-AI/
 cd LST-AI
 ```
 If you haven't already, build your CPU or GPU Docker image:
