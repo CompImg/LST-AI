@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN mkdir -p /custom_apps/lst_directory
 WORKDIR /custom_apps/lst_directory
-RUN git clone https://github.com/jqmcginnis/LST-AI
+RUN git clone https://github.com/CompImg/LST-AI/
 WORKDIR /custom_apps/lst_directory/LST-AI
 RUN pip install -e .
 
