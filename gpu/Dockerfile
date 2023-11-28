@@ -1,5 +1,5 @@
 # Start with NVIDIA CUDA image for GPU support
-FROM nvidia/cuda:12.2.0-runtime-ubuntu20.04
+FROM nvidia/cuda:12.1.0-runtime-ubuntu20.04
 
 # Prevents prompts from asking for user input during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -22,7 +22,7 @@ RUN pip3 install tensorflow-addons==0.19.0
 # Rest of your setup for LST-AI
 RUN mkdir -p /custom_apps/lst_directory
 WORKDIR /custom_apps/lst_directory
-RUN git clone https://github.com/jqmcginnis/LST-AI
+RUN git clone https://github.com/CompImg/LST-AI/
 WORKDIR /custom_apps/lst_directory/LST-AI
 RUN pip install -e .
 
@@ -105,7 +105,13 @@ WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
 RUN unzip data.zip && rm data.zip
 
 # Ensure weights are downloaded
-RUN hd-bet -i /custom_apps/lst_directory/LST-AI/testing/segmentation/T1W.nii.gz -mode accurate 
+# RUN hd-bet -i /custom_apps/lst_directory/LST-AI/testing/segmentation/T1W.nii.gz -mode accurate
+WORKDIR /custom_apps/lst_directory/
+RUN mkdir -p /root/hd-bet_params
+RUN wget -O /root/hd-bet_params/data.zip \
+    https://zenodo.org/api/records/2540695/files-archive
+WORKDIR /root/hd-bet_params/
+RUN unzip data.zip && rm data.zip
 
 # Make directories for mounting data
 RUN mkdir -p /custom_apps/lst_input
