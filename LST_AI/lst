@@ -14,8 +14,15 @@ import sys
 import tempfile
 import shutil
 import argparse
-from warnings import filterwarnings
-filterwarnings("ignore")
+
+# to filter the warning:
+# WARNING:root:The given value for groups will be overwritten.
+import logging
+class Filter(logging.Filter):
+    def filter(self, record):
+        return 'The given value for groups will be overwritten.' not in record.getMessage()
+
+logging.getLogger().addFilter(Filter())
 
 from LST_AI.strip import run_hdbet, apply_mask
 from LST_AI.register import mni_registration, apply_warp, rigid_reg
@@ -99,7 +106,7 @@ if __name__ == "__main__":
                         dest='device',
                         help='Either int for GPU ID or "cpu" for CPU (default: 0)',
                         type=str,
-                        default='cpu')
+                        default='0')
 
     parser.add_argument('--threads',
                         dest='threads',
