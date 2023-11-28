@@ -22,7 +22,7 @@ RUN pip3 install tensorflow-addons==0.19.0
 # Rest of your setup for LST-AI
 RUN mkdir -p /custom_apps/lst_directory
 WORKDIR /custom_apps/lst_directory
-RUN git clone https://github.com/jqmcginnis/LST-AI
+RUN git clone https://github.com/CompImg/LST-AI/
 WORKDIR /custom_apps/lst_directory/LST-AI
 RUN pip install -e .
 
