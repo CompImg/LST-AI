@@ -52,7 +52,7 @@ source /path/to/new/lst/virtual/environment/bin/activate
 
 4. Install LST-AI (and yeah, with `pip -e` option!):
 ```bash
-git clone https://github.com/jqmcginnis/LST-AI
+git clone https://github.com/CompImg/LST-AI/
 cd LST-AI
 pip install -e .
 cd ..
@@ -146,7 +146,7 @@ Once you have built your Docker image, using the Dockerfile provided, you can ru
 #### Build the Docker Image
 Clone the repository:
 ```bash
-git clone https://github.com/jqmcginnis/LST-AI
+git clone https://github.com/CompImg/LST-AI/
 cd LST-AI
 ```
 If you haven't already, build your CPU or GPU Docker image:
@@ -170,12 +170,7 @@ docker run -v [path_on_host]:[path_in_container] [image_name]
 Given an example command, the run command might look something like this:
 
 ```bash
-docker run -v /mnt/data/lst_example/sub-123456/ses-20231101/anat:/data/anat \
-           -v /mnt/data/lst_example/derivatives/sub-123456/ses-20231101/:/data/output \
-           lstai:latest \
-           --t1 /data/anat/sub-123456_ses-20231101_T1w.nii.gz \
-           --flair /data/anat/sub-123456_ses-20231101_FLAIR.nii.gz \
-           --output /data/output/
+docker run -v /home/ginnis/lst_in:/custom_apps/lst_input -v /home/ginnis/lst_out/:/custom_apps/lst_output -v /home/ginnis/lst_temp/:/custom_apps/lst_temp lst:latest --t1 /custom_apps/lst_input/t1.nii.gz --flair /custom_apps/lst_input/flair3d.nii.gz --output /custom_apps/lst_output --temp /custom_apps/lst_temp --device 0
 ```
 
 __Note__: Ensure your paths are absolute, as Docker requires absolute paths for bind mounts. Since you've bind-mounted your output directory to `/mnt/data/lst_example/derivatives/sub-123456/ses-20231101/` on your host, the results from the Docker container will be written directly to this directory. No additional steps are needed to retrieve the results, they will appear in this directory after the container has finished processing.
