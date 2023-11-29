@@ -100,7 +100,7 @@ RUN pip3 install torch torchvision torchaudio
 # Retrieve model weights and files for LST-AI
 WORKDIR /custom_apps/lst_directory/
 RUN wget -O /custom_apps/lst_directory/LST-AI/LST_AI/data.zip \
-    https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst.zip
+    https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst_data.zip
 WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
 RUN unzip data.zip && rm data.zip
 

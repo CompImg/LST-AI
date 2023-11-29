@@ -7,9 +7,9 @@ def download_data(path):
     """
     Downloads required model weights, binaries and atlas files for usage.
     """
-    url = "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst.zip"
+    url = "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst_data.zip"
 
-    target_path = "lst.zip"
+    target_path = "lst_data.zip"
     extract_path = path  # This is the base directory.
 
     atlas_path = os.path.join(extract_path, 'atlas')
