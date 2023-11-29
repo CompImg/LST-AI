@@ -72,7 +72,7 @@ cd ..
   * 6.1 (Variant A): Download the built greedy tool and place into structure
     1) Download the tool
     ```bash
-    wget "https://syncandshare.lrz.de/dl/fi65b93EmVE42LPbRtoVgR/greedy"
+    wget "https://github.com/jqmcginnis/LST-AI/releases/download/v1.0.0/greedy"
     ```
     2) and ensure it is a findable path:
     ```bash
