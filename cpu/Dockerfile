@@ -1,4 +1,4 @@
-# Start with the base Ubuntu 20.04 LTS image
+# Start with the base Ubuntu 22.04 LTS image
 FROM ubuntu:22.04
 
 # Prevents prompts from asking for user input during package installation
@@ -12,11 +12,14 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip
 
+# Setup LST-AI
 RUN mkdir -p /custom_apps/lst_directory
 WORKDIR /custom_apps/lst_directory
 RUN git clone https://github.com/CompImg/LST-AI/
 WORKDIR /custom_apps/lst_directory/LST-AI
 RUN pip install -e .
+
+# Setup for greedy (Choose either pre-compiled or compilation from source)
 
 # There are two possible ways of obtaining 'greedy'
 # Download pre-compiled version via wget
@@ -84,21 +87,26 @@ RUN git clone https://github.com/MIC-DKFZ/HD-BET
 WORKDIR /custom_apps/lst_directory/HD-BET
 RUN pip install -e .
 
-# Ensure model weights and files are available
-# before first (offline) usage
+# Retrieve model weights and files for LST-AI
 WORKDIR /custom_apps/lst_directory/
 RUN wget -O /custom_apps/lst_directory/LST-AI/LST_AI/data.zip \
     https://syncandshare.lrz.de/dl/fiPiTmWKv5Ga4S7YA7TNks/.dir
 WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
 RUN unzip data.zip && rm data.zip
 
-# Ensure weights are downloaded
-RUN hd-bet -i /custom_apps/lst_directory/LST-AI/testing/segmentation/T1W.nii.gz -mode accurate 
+# Retrieve model weights for HD-BET
+WORKDIR /custom_apps/lst_directory/
+RUN mkdir -p /root/hd-bet_params
+RUN wget -O /root/hd-bet_params/data.zip \
+    https://zenodo.org/api/records/2540695/files-archive
+WORKDIR /root/hd-bet_params/
+RUN unzip data.zip && rm data.zip
 
-# Make directories for mounting data
+# Make directories for easily mounting data
+# You may change these to your liking
 RUN mkdir -p /custom_apps/lst_input
 RUN mkdir -p /custom_apps/lst_output
 RUN mkdir -p /custom_apps/lst_temp
 
 # Entrypoint to run the python script when the container starts
-ENTRYPOINT [ "lst"]
+ENTRYPOINT [ "lst" ]

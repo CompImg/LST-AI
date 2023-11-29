@@ -19,7 +19,7 @@ RUN pip3 install torch torchvision torchaudio
 RUN pip3 install tensorflow-gpu==2.11.0
 RUN pip3 install tensorflow-addons==0.19.0
 
-# Rest of your setup for LST-AI
+# Setup LST-AI
 RUN mkdir -p /custom_apps/lst_directory
 WORKDIR /custom_apps/lst_directory
 RUN git clone https://github.com/CompImg/LST-AI/
@@ -88,7 +88,7 @@ RUN wget "https://syncandshare.lrz.de/dl/fi65b93EmVE42LPbRtoVgR/greedy" && \
 # RUN make -j$(nproc)
 # RUN make install
 
-# Setup for HD-BET
+# Install HD-BET
 WORKDIR /custom_apps/lst_directory
 RUN git clone https://github.com/MIC-DKFZ/HD-BET
 WORKDIR /custom_apps/lst_directory/HD-BET
@@ -97,15 +97,14 @@ RUN pip install -e .
 # Install PyTorch (Choose the version compatible with the CUDA version)
 RUN pip3 install torch torchvision torchaudio
 
-# Setup for model weights and files for LST-AI
+# Retrieve model weights and files for LST-AI
 WORKDIR /custom_apps/lst_directory/
 RUN wget -O /custom_apps/lst_directory/LST-AI/LST_AI/data.zip \
     https://syncandshare.lrz.de/dl/fiPiTmWKv5Ga4S7YA7TNks/.dir
 WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
 RUN unzip data.zip && rm data.zip
 
-# Ensure weights are downloaded
-# RUN hd-bet -i /custom_apps/lst_directory/LST-AI/testing/segmentation/T1W.nii.gz -mode accurate
+# Retrieve model weights for HD-BET
 WORKDIR /custom_apps/lst_directory/
 RUN mkdir -p /root/hd-bet_params
 RUN wget -O /root/hd-bet_params/data.zip \
@@ -113,7 +112,8 @@ RUN wget -O /root/hd-bet_params/data.zip \
 WORKDIR /root/hd-bet_params/
 RUN unzip data.zip && rm data.zip
 
-# Make directories for mounting data
+# Make directories for easily mounting data
+# You may change these to your liking
 RUN mkdir -p /custom_apps/lst_input
 RUN mkdir -p /custom_apps/lst_output
 RUN mkdir -p /custom_apps/lst_temp
