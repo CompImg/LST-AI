@@ -35,7 +35,7 @@ RUN pip install -e .
 # Option 1: Download pre-compiled version of greedy
 # Download pre-compiled version of greedy and place in $PATH
 WORKDIR /custom_apps/lst_directory
-RUN wget "https://github.com/jqmcginnis/LST-AI/releases/download/v1.0.0/greedy" && \
+RUN wget "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/greedy" && \
     chmod +x greedy && \
     mv greedy /usr/local/bin
 
@@ -100,7 +100,7 @@ RUN pip3 install torch torchvision torchaudio
 # Retrieve model weights and files for LST-AI
 WORKDIR /custom_apps/lst_directory/
 RUN wget -O /custom_apps/lst_directory/LST-AI/LST_AI/data.zip \
-    https://github.com/jqmcginnis/LST-AI/releases/download/v1.0.0/lst.zip
+    https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst.zip
 WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
 RUN unzip data.zip && rm data.zip
 

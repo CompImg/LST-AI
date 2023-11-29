@@ -1,7 +1,7 @@
 # LST-AI - Deep Learning Ensemble for Accurate MS Lesion Segmentation
 
-Welcome to our codebase for LST-AI, the deep learning-based successor of the original [Lesion Segmentation Toolbox (LST)](https://www.applied-statistics.de/lst.html) by [Schmidt et al.](https://www.sciencedirect.com/science/article/abs/pii/S1053811911013139) 
-LST-AI was collaboratively developed by the Department of Neurology and Department of Neuroradiology, Klinikum rechts der Isar at the Technical University of Munich, and the Department of Computer Science at the Technical University of Munich. 
+Welcome to our codebase for LST-AI, the deep learning-based successor of the original [Lesion Segmentation Toolbox (LST)](https://www.applied-statistics.de/lst.html) by [Schmidt et al.](https://www.sciencedirect.com/science/article/abs/pii/S1053811911013139)
+LST-AI was collaboratively developed by the Department of Neurology and Department of Neuroradiology, Klinikum rechts der Isar at the Technical University of Munich, and the Department of Computer Science at the Technical University of Munich.
 
 <img src="figures/header.png" alt="Overview" width="1000" height="600" title="Meet LST-AI.">
 
@@ -74,7 +74,7 @@ cd ..
   * 6.1 (Variant A): Download the pre-built greedy tool and place it into structure
     1) Download the tool
     ```bash
-    wget "https://github.com/jqmcginnis/LST-AI/releases/download/v1.0.0/greedy"
+    wget "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/greedy"
     ```
     2) and ensure it is a findable path:
     ```bash
@@ -95,7 +95,7 @@ cd ..
     cmake \
     g++ \
     libgl1-mesa-dev
-    
+
     wget https://github.com/InsightSoftwareConsortium/ITK/archive/refs/tags/v5.2.1.tar.gz
     tar -zxvf v5.2.1.tar.gz
     cd ITK-5.2.1
@@ -119,7 +119,7 @@ cd ..
 
 ### Usage of LST-AI
 
-Once installed, lst can be used as a simple command line tool. LST-AI expects you to provide **zipped NIFTIs (*.nii.gz)** as inputan d assumes the input images **NOT** to be **skull-stripped**. If you already have skull-stripped images, **do not forget** to provide the **--skull-stripped** option, otherwise, the segmentation performance will be severely affected. 
+Once installed, lst can be used as a simple command line tool. LST-AI expects you to provide **zipped NIFTIs (*.nii.gz)** as inputan d assumes the input images **NOT** to be **skull-stripped**. If you already have skull-stripped images, **do not forget** to provide the **--skull-stripped** option, otherwise, the segmentation performance will be severely affected.
 
 LST always requires you to provide a `--t1` T1w and `--flair` FLAIR image and to specify an output path for the segmentation results `--output`. If you would like to keep all processing files, for example, the segmentations and skull-stripped images in the MNI152 space, provide a director via `--temp`.
 
@@ -180,7 +180,7 @@ docker run -v [path_on_host]:[path_in_container] [image_name]
 Given our provided GPU Dockerfile command, the run command might look something like this:
 
 ```bash
-docker run -v /home/ginnis/lst_in:/custom_apps/lst_input -v /home/ginnis/lst_out/:/custom_apps/lst_output -v /home/ginnis/lst_temp/:/custom_apps/lst_temp lst:latest --t1 /custom_apps/lst_input/t1.nii.gz --flair /custom_apps/lst_input/flair3d.nii.gz --output /custom_apps/lst_output --temp /custom_apps/lst_temp 
+docker run -v /home/ginnis/lst_in:/custom_apps/lst_input -v /home/ginnis/lst_out/:/custom_apps/lst_output -v /home/ginnis/lst_temp/:/custom_apps/lst_temp lst:latest --t1 /custom_apps/lst_input/t1.nii.gz --flair /custom_apps/lst_input/flair3d.nii.gz --output /custom_apps/lst_output --temp /custom_apps/lst_temp
 ```
 
 __Note__: Ensure your paths are absolute, as Docker requires absolute paths for bind mounts. Since you've bind-mounted your output directory to `/home/ginnis/lst_out/` on your host, the results from the Docker container will be written directly to this directory. No additional steps are needed to retrieve the results, they will appear in this directory after the container has finished processing.
@@ -194,9 +194,9 @@ We invite you to tailor LST-AI to your pipeline and application, please have a l
 If you use our tool, please cite us:
 ```
 @article{Wiltgen2023lst,
-  author = {Tun Wiltgen and Julian McGinnis and Sarah Schlaeger and CuiCi Voon and Achim Berthele and Daria 
-  Bischl and Lioba Grundl and Nikolaus Will and Marie Metz and David Schinz and Dominik Sepp and Philipp 
-  Prucker and Benita Schmitz-Koep and Claus Zimmer and Bjoern Menze and Daniel Rueckert and Bernhard Hemmer 
+  author = {Tun Wiltgen and Julian McGinnis and Sarah Schlaeger and CuiCi Voon and Achim Berthele and Daria
+  Bischl and Lioba Grundl and Nikolaus Will and Marie Metz and David Schinz and Dominik Sepp and Philipp
+  Prucker and Benita Schmitz-Koep and Claus Zimmer and Bjoern Menze and Daniel Rueckert and Bernhard Hemmer
   and Jan Kirschke and Mark Muehlau and Benedikt Wiestler},
   title = {LST-AI: a Deep Learning Ensemble for Accurate MS Lesion Segmentation},
   elocation-id = {2023.11.23.23298966},
