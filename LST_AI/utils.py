@@ -7,17 +7,20 @@ def download_data(path):
     """
     Downloads required model weights, binaries and atlas files for usage.
     """
-    url = "https://syncandshare.lrz.de/dl/fiPiTmWKv5Ga4S7YA7TNks/.dir"
+    url = "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst.zip"
 
-    target_path = "data.zip"
+    target_path = "lst.zip"
     extract_path = path  # This is the base directory.
 
     atlas_path = os.path.join(extract_path, 'atlas')
     binary_path = os.path.join(extract_path, 'binaries')
     model_path = os.path.join(extract_path, 'model')
-    testing_path = os.path.join(extract_path, 'testing')
 
-    paths_to_check = [atlas_path, binary_path, model_path, testing_path]
+    # remove testing paths
+    # testing_path = os.path.join(extract_path, 'testing')
+    # paths_to_check = [atlas_path, binary_path, model_path, testing_path]
+
+    paths_to_check = [atlas_path, binary_path, model_path]
 
     # Check if all paths exist.
     if not all(os.path.exists(path) for path in paths_to_check):
