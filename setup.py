@@ -13,14 +13,14 @@ setup(name='LST_AI',
                 'ms', 'lst', 'ai'],
       python_requires='>=3.8',
       install_requires = [
-        'numpy<1.24.0',
-        'pillow<10.1.0',
+        'numpy',
+        'pillow',
         'scipy>=1.9.0',
         'scikit-image>=0.21.0',
         'tensorflow',
         'tensorflow-addons',
-        'nibabel>=4.0.0',
-        'requests>=2.20.0'
+        'nibabel',
+        'requests'
       ],
       scripts=['LST_AI/lst'],
       license='MIT',
