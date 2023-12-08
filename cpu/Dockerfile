@@ -1,5 +1,6 @@
 # Start with the base Ubuntu 22.04 LTS image
-FROM ubuntu:22.04
+# FROM ubuntu:22.04
+FROM nvidia/cuda:12.3.1-runtime-ubuntu20.04
 
 # Prevents prompts from asking for user input during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -8,16 +9,22 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     git \
     wget \
-    unzip \
-    python3 \
-    python3-pip
+    unzip
+
+# copied from https://stackoverflow.com/a/76170605/3485363
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive \
+    apt-get install -y software-properties-common && \
+    add-apt-repository -y ppa:deadsnakes/ppa && \
+    apt-get install -y python3.10 curl && \
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+
+# RUN curl -sSL https://install.python-poetry.org | python3.10 - --preview
+RUN pip3 install --upgrade requests
+RUN ln -fs /usr/bin/python3.10 /usr/bin/python
+RUN python --version
 
 # Setup LST-AI
 RUN mkdir -p /custom_apps/lst_directory
-WORKDIR /custom_apps/lst_directory
-RUN git clone https://github.com/CompImg/LST-AI/
-WORKDIR /custom_apps/lst_directory/LST-AI
-RUN pip install -e .
 
 # Setup for greedy (Choose either pre-compiled or compilation from source)
 
@@ -27,6 +34,16 @@ RUN pip install -e .
 
 # Option 1: Download pre-compiled version of greedy
 # Download pre-compiled version of greedy and place in $PATH
+
+# https://sourceforge.net/projects/greedy-reg/files/Nightly/greedy-nightly-MacOS-x86_64.dmg/download
+
+# for MAC use this instead?
+#WORKDIR /custom_apps/lst_directory
+#RUN wget "https://sourceforge.net/projects/greedy-reg/files/Nightly/greedy-nightly-MacOS-x86_64.dmg/download" -o "greedy.dmg" && \
+#    chmod +x greedy && \
+#    mv greedy /usr/local/bin
+
+
 WORKDIR /custom_apps/lst_directory
 RUN wget "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/greedy" && \
     chmod +x greedy && \
@@ -87,19 +104,27 @@ RUN git clone https://github.com/MIC-DKFZ/HD-BET
 WORKDIR /custom_apps/lst_directory/HD-BET
 RUN pip install -e .
 
-# Retrieve model weights and files for LST-AI
-WORKDIR /custom_apps/lst_directory/
-RUN wget -O /custom_apps/lst_directory/LST-AI/LST_AI/data.zip \
-    https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst_data.zip
-WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
-RUN unzip data.zip && rm data.zip
-
 # Retrieve model weights for HD-BET
 WORKDIR /custom_apps/lst_directory/
 RUN mkdir -p /root/hd-bet_params
 RUN wget -O /root/hd-bet_params/data.zip \
     https://zenodo.org/api/records/2540695/files-archive
 WORKDIR /root/hd-bet_params/
+RUN unzip data.zip && rm data.zip
+
+WORKDIR /custom_apps/lst_directory
+ARG CACHEBUST=1
+RUN git clone https://github.com/jqmcginnis/LST-AI/
+WORKDIR /custom_apps/lst_directory/LST-AI
+RUN git checkout 1c05bb5ac58144e20fd82fa9bca95c6d16728f8c
+# pip or pip3 depending on your system
+RUN pip install -e .
+
+# Retrieve model weights and files for LST-AI
+WORKDIR /custom_apps/lst_directory/
+RUN wget -O /custom_apps/lst_directory/LST-AI/LST_AI/data.zip \
+    https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst_data.zip
+WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
 RUN unzip data.zip && rm data.zip
 
 # Make directories for easily mounting data
