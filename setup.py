@@ -11,7 +11,7 @@ setup(name='LST_AI',
                     'benedict.wiestler@tum.de'],
       keywords=['lesion_segmentation', 
                 'ms', 'lst', 'ai'],
-      python_requires='>=3.8',
+      python_requires='>=3.9',
       install_requires = [
         'numpy',
         'pillow',
