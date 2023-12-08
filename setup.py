@@ -17,7 +17,7 @@ setup(name='LST_AI',
         'pillow',
         'scipy>=1.9.0',
         'scikit-image>=0.21.0',
-        'tensorflow>=2.14',
+        'tensorflow',
         'tensorflow-addons',
         'nibabel',
         'requests'
