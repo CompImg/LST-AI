@@ -6,12 +6,11 @@ import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 
-def load_custom_model(model_path):
+def load_custom_model(model_path, compile=False):
     custom_objects = {
-        'Addons>InstanceNormalization': CustomGroupNormalization,  # Assuming 'InstanceNormalization' is the class name
-        # Add any other custom layers or objects here if needed
+        'Addons>InstanceNormalization': CustomGroupNormalization,
     }
-    return tf.keras.models.load_model(model_path, custom_objects=custom_objects, compile=False)
+    return tf.keras.models.load_model(model_path, custom_objects=custom_objects, compile=compile)
 
 
 class CustomGroupNormalization(tf.keras.layers.Layer):
@@ -64,18 +63,6 @@ class CustomGroupNormalization(tf.keras.layers.Layer):
             'gamma_constraint': self.gamma_constraint
         })
         return config
-
-
-
-
-
-def replace_layer(model, custom_layer_class, layer_to_replace):
-    for layer in model.layers:
-        if isinstance(layer, layer_to_replace):
-            # Create the custom layer with the same configuration
-            new_layer = custom_layer_class(**layer.get_config())
-            model._layers[model.layers.index(layer)] = new_layer
-    return model
 
 def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, device='cpu', input_shape=(192,192,192), threshold=0.5):
     """
@@ -167,17 +154,7 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, d
     for i, model in enumerate(unet_mdls):
         with tf.device(tf_device):
             print(f"Running model {i}. ")
-            # mdl = tf.keras.models.load_model(model, compile=False)
-            # Load your model (adjust this according to how you have saved your model)
-            # mdl = tf.keras.models.load_model(model, compile=False)
-            mdl = load_custom_model(model)
-
-            # Replace TFA Instance Normalization layers with CustomGroupNormalization
-            # Assume 'layer_to_replace' is the class of the TFA Instance Normalization layer
-            # mdl = replace_layer(model, CustomGroupNormalization, "Addons>InstanceNormalization")
-
-            # Compile the model if necessary
-            # model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+            mdl = load_custom_model(model, compile=False)
 
         img_image = np.stack([flair, t1], axis=-1)
         img_image = np.expand_dims(img_image, axis=0)
