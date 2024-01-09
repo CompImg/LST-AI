@@ -191,7 +191,7 @@ We invite you to tailor LST-AI to your pipeline and application, please have a l
 
 ### Citation
 
-If you use our tool, please cite us:
+Please consider citing [LST-AI](https://www.medrxiv.org/content/10.1101/2023.11.23.23298966) to support the development:
 ```
 @article{Wiltgen2023lst,
   author = {Tun Wiltgen and Julian McGinnis and Sarah Schlaeger and CuiCi Voon and Achim Berthele and Daria
@@ -209,8 +209,9 @@ If you use our tool, please cite us:
 }
 ```
 
-We also kindly ask you to cite greedy and HD-BET, which we use in the LST-AI pipeline.
+Further, please also credit [greedy](https://greedy.readthedocs.io/en/latest/), and [HD-BET](https://github.com/MIC-DKFZ/HD-BET) used for preprocessing the image data.
 
+greedy
 ```
 @article{yushkevich2016ic,
   title={IC-P-174: Fast Automatic Segmentation of Hippocampal Subfields and Medial Temporal Lobe Subregions In 3 Tesla and 7 Tesla T2-Weighted MRI},
@@ -223,6 +224,7 @@ We also kindly ask you to cite greedy and HD-BET, which we use in the LST-AI pip
 }
 ```
 
+HD-BET:
 ```
 @article{isensee2019automated,
   title={Automated brain extraction of multisequence MRI using artificial neural networks},
