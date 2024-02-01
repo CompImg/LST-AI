@@ -358,12 +358,12 @@ if __name__ == "__main__":
 
     # Compute Stats of (annotated) segmentation if they exist
     if os.path.exists(path_orig_segmentation):
-        compute_stats(mask=path_orig_segmentation,
+        compute_stats(mask_file=path_orig_segmentation,
                       output_file=os.path.join(args.output, filename_output_stats_segmentation),
                       multi_class=False)
 
     if os.path.exists(path_orig_annotated_segmentation):
-        compute_stats(mask=path_orig_annotated_segmentation,
+        compute_stats(mask_file=path_orig_annotated_segmentation,
                       output_file=os.path.join(args.output, filename_output_stats_annotated_segmentation),
                       multi_class=True)
 
