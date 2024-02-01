@@ -139,8 +139,8 @@ if __name__ == "__main__":
     path_mni_stripped_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_desc-stripped_FLAIR.nii.gz')
 
     # Masks
-    path_orig_brainmask_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_T1w_mask.nii.gz')
-    path_orig_brainmask_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-flair_FLAIR_mask.nii.gz')
+    path_orig_brainmask_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_brainmask.nii.gz')
+    path_orig_brainmask_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-flair_brainmask.nii.gz')
     path_mni_brainmask = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_brainmask.nii.gz')
 
     # Temp Segmentation results
@@ -284,7 +284,7 @@ if __name__ == "__main__":
 
             # move processed mask to correct naming convention
             hdbet_mask = path_mni_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
-            shutil.copy(hdbet_mask, path_mni_brainmask)
+            shutil.move(hdbet_mask, path_mni_brainmask)
 
             # then apply brain mask to FLAIR
             apply_mask(input_image=path_mni_flair,
