@@ -114,6 +114,7 @@ def annotate_lesions(atlas_t1, atlas_mask, t1w_native, seg_native, out_atlas_war
 
 if __name__ == "__main__":
 
+    # Only for testing purposes
     lst_dir = os.getcwd()
     parent_directory = os.path.dirname(lst_dir)
     atlas_t1w_path = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_t1.nii.gz")

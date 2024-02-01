@@ -1,68 +1,11 @@
 import os
 import logging
-logging.getLogger('tensorflow').disabled = True
 import nibabel as nib
 import numpy as np
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 
-def load_custom_model(model_path, compile=False):
-    custom_objects = {
-        'Addons>InstanceNormalization': CustomGroupNormalization,
-    }
-    return tf.keras.models.load_model(model_path, custom_objects=custom_objects, compile=compile)
+from LST_AI.custom_tf import load_custom_model
 
-
-class CustomGroupNormalization(tf.keras.layers.Layer):
-    def __init__(self, groups=-1, **kwargs):
-        # Extract necessary arguments from kwargs
-        self.groups = kwargs.pop('groups', -1)
-        self.epsilon = kwargs.pop('epsilon', 0.001)
-        self.center = kwargs.pop('center', True)
-        self.scale = kwargs.pop('scale', True)
-        self.beta_initializer = kwargs.pop('beta_initializer', 'zeros')
-        self.gamma_initializer = kwargs.pop('gamma_initializer', 'ones')
-        self.beta_regularizer = kwargs.pop('beta_regularizer', None)
-        self.gamma_regularizer = kwargs.pop('gamma_regularizer', None)
-        self.beta_constraint = kwargs.pop('beta_constraint', None)
-        self.gamma_constraint = kwargs.pop('gamma_constraint', None)
-
-        # 'axis' argument is not used in GroupNormalization, so we remove it
-        kwargs.pop('axis', None)
-
-        super(CustomGroupNormalization, self).__init__(**kwargs)
-        self.group_norm = tf.keras.layers.GroupNormalization(
-            groups=self.groups,
-            epsilon=self.epsilon,
-            center=self.center,
-            scale=self.scale,
-            beta_initializer=self.beta_initializer,
-            gamma_initializer=self.gamma_initializer,
-            beta_regularizer=self.beta_regularizer,
-            gamma_regularizer=self.gamma_regularizer,
-            beta_constraint=self.beta_constraint,
-            gamma_constraint=self.gamma_constraint,
-            **kwargs
-        )
-
-    def call(self, inputs, training=None):
-        return self.group_norm(inputs, training=training)
-
-    def get_config(self):
-        config = super(CustomGroupNormalization, self).get_config()
-        config.update({
-            'groups': self.groups,
-            'epsilon': self.epsilon,
-            'center': self.center,
-            'scale': self.scale,
-            'beta_initializer': self.beta_initializer,
-            'gamma_initializer': self.gamma_initializer,
-            'beta_regularizer': self.beta_regularizer,
-            'gamma_regularizer': self.gamma_regularizer,
-            'beta_constraint': self.beta_constraint,
-            'gamma_constraint': self.gamma_constraint
-        })
-        return config
 
 def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, device='cpu', input_shape=(192,192,192), threshold=0.5):
     """
@@ -184,7 +127,7 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, d
 
 
 if __name__ == "__main__":
-
+    # Testing only
     # Working directory
     script_dir = os.getcwd()
     parent_dir = os.path.dirname(script_dir)

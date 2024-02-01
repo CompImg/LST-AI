@@ -15,19 +15,11 @@ import tempfile
 import shutil
 import argparse
 
-# to filter the warning:
-# WARNING:root:The given value for groups will be overwritten.
-import logging
-class Filter(logging.Filter):
-    def filter(self, record):
-        return 'The given value for groups will be overwritten.' not in record.getMessage()
-
-logging.getLogger().addFilter(Filter())
-
 from LST_AI.strip import run_hdbet, apply_mask
 from LST_AI.register import mni_registration, apply_warp, rigid_reg
 from LST_AI.segment import unet_segmentation
 from LST_AI.annotate import annotate_lesions
+from LST_AI.stats import compute_stats
 from LST_AI.utils import download_data
 
 if __name__ == "__main__":
@@ -135,10 +127,10 @@ if __name__ == "__main__":
             os.makedirs(work_dir)
 
     #  Define Image Paths (original space)
-    path_org_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-orig_T1w.nii.gz')
-    path_org_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-orig_FLAIR.nii.gz')
-    path_org_stripped_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-orig_desc-stripped_T1w.nii.gz')
-    path_org_stripped_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-orig_desc-stripped_FLAIR.nii.gz')
+    path_org_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_T1w.nii.gz')
+    path_org_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-flair_FLAIR.nii.gz')
+    path_org_stripped_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_desc-stripped_T1w.nii.gz')
+    path_org_stripped_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-flair_desc-stripped_FLAIR.nii.gz')
 
     #  Define Image Paths (MNI space)
     path_mni_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_T1w.nii.gz')
@@ -147,15 +139,23 @@ if __name__ == "__main__":
     path_mni_stripped_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_desc-stripped_FLAIR.nii.gz')
 
     # Masks
-    path_orig_brainmask_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-org_T1w_mask.nii.gz')
-    path_orig_brainmask_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-org_FLAIR_mask.nii.gz')
+    path_orig_brainmask_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_T1w_mask.nii.gz')
+    path_orig_brainmask_flair = os.path.join(work_dir, 'sub-X_ses-Y_space-flair_FLAIR_mask.nii.gz')
     path_mni_brainmask = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_brainmask.nii.gz')
 
-    # Segmentation results
-    path_orig_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-orig_seg.nii.gz')
+    # Temp Segmentation results
+    path_orig_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-flair_seg.nii.gz')
     path_mni_segmentation = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_seg.nii.gz')
-    path_orig_annotated_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-orig_seg-annotated.nii.gz')
+    path_orig_annotated_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-flair_seg-annotated.nii.gz')
     path_mni_annotated_segmentation = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_seg-annotated.nii.gz')
+
+    # Output paths (in original space)
+    filename_output_segmentation = "space-flair_seg-lst.nii.gz"
+    filename_output_annotated_segmentation = "space-flair_desc-annotated_seg-lst.nii.gz"
+
+    # Stats
+    filename_output_stats_segmentation = "lesion_stats.csv"
+    filename_output_stats_annotated_segmentation = "annotated_lesion_stats.csv"
 
     # affines
     path_affine_mni_t1w = os.path.join(work_dir, 'affine_t1w_to_mni.mat')
@@ -187,6 +187,7 @@ if __name__ == "__main__":
 
     # Annotation only
     if args.annotate_only:
+        print("LST-AI assumes existing segmentation to be in FLAIR space.")
         if os.path.isfile(args.existing_seg):
             shutil.copy(args.existing_seg, path_orig_segmentation)
         else:
@@ -240,7 +241,7 @@ if __name__ == "__main__":
                         out_annotated_native=path_orig_annotated_segmentation)
 
         shutil.copy(path_orig_annotated_segmentation,
-                    os.path.join(args.output, "space-orig_desc-annotated_seg-lst.nii.gz"))
+                    os.path.join(args.output, filename_output_annotated_segmentation))
 
 
     # Segmentation only + (opt. Annotation)
@@ -283,7 +284,6 @@ if __name__ == "__main__":
 
             # move processed mask to correct naming convention
             hdbet_mask = path_mni_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
-            print(hdbet_mask)
             shutil.copy(hdbet_mask, path_mni_brainmask)
 
             # then apply brain mask to FLAIR
@@ -333,7 +333,7 @@ if __name__ == "__main__":
                     n_threads=args.threads)
 
         # store the segmentations
-        shutil.copy(path_orig_segmentation, os.path.join(args.output, "space-orig_seg-lst.nii.gz"))
+        shutil.copy(path_orig_segmentation, os.path.join(args.output, filename_output_segmentation))
 
         # Annotation
         if not args.segment_only:
@@ -354,8 +354,18 @@ if __name__ == "__main__":
                         n_threads=args.threads)
 
             # store the segmentations
-            shutil.copy(path_orig_annotated_segmentation, os.path.join(args.output, "space-orig_desc-annotated_seg-lst.nii.gz"))
+            shutil.copy(path_orig_annotated_segmentation, os.path.join(args.output, filename_output_annotated_segmentation))
 
+    # Compute Stats of (annotated) segmentation if they exist
+    if os.path.exists(path_orig_segmentation):
+        compute_stats(mask=path_orig_segmentation,
+                      output_file=os.path.join(args.output, filename_output_stats_segmentation),
+                      multi_class=False)
+
+    if os.path.exists(path_orig_annotated_segmentation):
+        compute_stats(mask=path_orig_annotated_segmentation,
+                      output_file=os.path.join(args.output, filename_output_stats_annotated_segmentation),
+                      multi_class=True)
 
     print(f"Results in {work_dir}")
     if not args.temp:
