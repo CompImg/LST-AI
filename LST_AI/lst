@@ -144,10 +144,10 @@ if __name__ == "__main__":
     path_mni_brainmask = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_brainmask.nii.gz')
 
     # Temp Segmentation results
-    path_orig_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-flair_seg.nii.gz')
-    path_mni_segmentation = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_seg.nii.gz')
-    path_orig_annotated_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-flair_seg-annotated.nii.gz')
-    path_mni_annotated_segmentation = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_seg-annotated.nii.gz')
+    path_orig_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-flair_seg-lst.nii.gz')
+    path_mni_segmentation = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_seg-lst.nii.gz')
+    path_orig_annotated_segmentation =  os.path.join(work_dir, 'sub-X_ses-Y_space-flair_desc-annotated_seg-lst.nii.gz')
+    path_mni_annotated_segmentation = os.path.join(work_dir, 'sub-X_ses-Y_space-mni_desc-annotated_seg-lst.nii.gz')
 
     # Output paths (in original space)
     filename_output_segmentation = "space-flair_seg-lst.nii.gz"
