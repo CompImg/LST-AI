@@ -106,9 +106,9 @@ def apply_warp(image_org_space, affine, origin, target, reverse=False, n_threads
 
     subprocess.run(shlex.split(warp_call), check=True)
 
-
-
 if __name__ == "__main__":
+
+    # Testing only
 
     # Working directory
     script_dir = os.getcwd()

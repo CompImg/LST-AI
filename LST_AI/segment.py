@@ -5,9 +5,9 @@ import nibabel as nib
 import numpy as np
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
-import tensorflow_addons as tfa
-#logging.getLogger("tensorflow").setLevel(logging.CRITICAL)
-#logging.getLogger("tensorflow_addons").setLevel(logging.CRITICAL)
+
+from LST_AI.custom_tf import load_custom_model
+
 
 def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, device='cpu', input_shape=(192,192,192), threshold=0.5):
     """
@@ -99,7 +99,7 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, d
     for i, model in enumerate(unet_mdls):
         with tf.device(tf_device):
             print(f"Running model {i}. ")
-            mdl = tf.keras.models.load_model(model, compile=False)
+            mdl = load_custom_model(model, compile=False)
 
         img_image = np.stack([flair, t1], axis=-1)
         img_image = np.expand_dims(img_image, axis=0)
@@ -129,7 +129,7 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, d
 
 
 if __name__ == "__main__":
-
+    # Testing only
     # Working directory
     script_dir = os.getcwd()
     parent_dir = os.path.dirname(script_dir)

@@ -16,10 +16,6 @@ def download_data(path):
     binary_path = os.path.join(extract_path, 'binaries')
     model_path = os.path.join(extract_path, 'model')
 
-    # remove testing paths
-    # testing_path = os.path.join(extract_path, 'testing')
-    # paths_to_check = [atlas_path, binary_path, model_path, testing_path]
-
     paths_to_check = [atlas_path, binary_path, model_path]
 
     # Check if all paths exist.
