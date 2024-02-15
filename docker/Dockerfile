@@ -109,7 +109,7 @@ WORKDIR /custom_apps/lst_directory
 RUN git clone https://github.com/jqmcginnis/LST-AI/
 WORKDIR /custom_apps/lst_directory/LST-AI
 RUN git pull origin main
-RUN git checkout c56fa98b32b0134899b77c480a27278039e9c5c2
+RUN git checkout v1.1.0
 
 # pip or pip3 depending on your system
 RUN pip install -e .
@@ -117,7 +117,7 @@ RUN pip install -e .
 # Retrieve model weights and files for LST-AI
 WORKDIR /custom_apps/lst_directory/
 RUN wget -O /custom_apps/lst_directory/LST-AI/LST_AI/data.zip \
-    https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst_data.zip
+    https://github.com/CompImg/LST-AI/releases/download/v1.1.0/lst_data.zip
 WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
 RUN unzip data.zip && rm data.zip
 
