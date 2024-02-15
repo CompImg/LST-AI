@@ -65,7 +65,7 @@ def compute_stats(mask_file, output_file, multi_class):
 
         results.append({
             'Num_Lesions': num_lesions,
-            'Num_Vox_Lesions': voxel_count,
+            'Num_Vox': voxel_count,
             'Lesion_Volume': volume
         })
 
@@ -77,9 +77,9 @@ def compute_stats(mask_file, output_file, multi_class):
             for result in results:
                 writer.writerow([result['Region'], result['Num_Lesions'], result['Num_Vox'], result['Lesion_Volume']])
         else:
-            writer.writerow(['Num_Lesions', 'Num_Vox_Lesions', 'Lesion_Volume'])
+            writer.writerow(['Num_Lesions', 'Num_Vox', 'Lesion_Volume'])
             for result in results:
-                writer.writerow([result['Num_Lesions'], result['Num_Vox_Lesions'], result['Lesion_Volume']])
+                writer.writerow([result['Num_Lesions'], result['Num_Vox'], result['Lesion_Volume']])
 
 if __name__ == "__main__":
     """
