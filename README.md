@@ -193,19 +193,13 @@ We invite you to tailor LST-AI to your pipeline and application, please have a l
 
 Please consider citing [LST-AI](https://www.medrxiv.org/content/10.1101/2023.11.23.23298966) to support the development:
 ```
-@article{Wiltgen2023lst,
-  author = {Tun Wiltgen and Julian McGinnis and Sarah Schlaeger and CuiCi Voon and Achim Berthele and Daria
-  Bischl and Lioba Grundl and Nikolaus Will and Marie Metz and David Schinz and Dominik Sepp and Philipp
-  Prucker and Benita Schmitz-Koep and Claus Zimmer and Bjoern Menze and Daniel Rueckert and Bernhard Hemmer
-  and Jan Kirschke and Mark Muehlau and Benedikt Wiestler},
-  title = {LST-AI: a Deep Learning Ensemble for Accurate MS Lesion Segmentation},
-  elocation-id = {2023.11.23.23298966},
-  year = {2023},
-  doi = {10.1101/2023.11.23.23298966},
-  publisher = {Cold Spring Harbor Laboratory Press},
-  URL = {https://www.medrxiv.org/content/early/2023/11/24/2023.11.23.23298966},
-  eprint = {https://www.medrxiv.org/content/early/2023/11/24/2023.11.23.23298966.full.pdf},
-  journal = {medRxiv}
+@article{wiltgen2024lst,
+  title={LST-AI: A deep learning ensemble for accurate MS lesion segmentation},
+  author={Wiltgen, Tun and McGinnis, Julian and Schlaeger, Sarah and Kofler, Florian and Voon, CuiCi and Berthele, Achim and Bischl, Daria and Grundl, Lioba and Will, Nikolaus and Metz, Marie and others},
+  journal={NeuroImage: Clinical},
+  pages={103611},
+  year={2024},
+  publisher={Elsevier}
 }
 ```
 
