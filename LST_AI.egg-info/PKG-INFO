@@ -1,0 +1,16 @@
+Metadata-Version: 1.2
+Name: LST-AI
+Version: 1.1.0
+Summary: Lesion Segmentation Toolbox AI
+Home-page: https://github.com/CompImg/LST-AI
+Author: LST-AI Team
+Author-email: ['julian.mcginnis@tum.de', 'tun.wiltgen@tum.de', 'mark.muehlau@tum.de', 'benedict.wiestler@tum.de']
+License: MIT
+Description: UNKNOWN
+Keywords: lesion_segmentation,ms,lst,ai
+Platform: UNKNOWN
+Classifier: Intended Audience :: Science/Research
+Classifier: Programming Language :: Python
+Classifier: Topic :: Scientific/Engineering
+Classifier: Operating System :: Unix
+Requires-Python: >=3.8
