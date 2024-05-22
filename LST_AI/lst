@@ -87,6 +87,12 @@ if __name__ == "__main__":
                         help='Threshold for binarizing the joint segmentation (default: 0.5)',
                         type=float,
                         default=0.5)
+    
+    parser.add_argument('--clipping',
+                        dest='clipping',
+                        help='Clipping for standardization of image intensities (default: (min,max)=(0.5,99.5))',
+                        type=float,
+                        default=(0.5,99.5))
 
     parser.add_argument('--fast-mode',
                         action='store_true',
@@ -323,7 +329,8 @@ if __name__ == "__main__":
                         output_segmentation_path=path_mni_segmentation,
                         device=args.device,
                         input_shape=(192,192,192),
-                        threshold=args.threshold)
+                        threshold=args.threshold,
+                        clipping=args.clipping)
 
         apply_warp(image_org_space=path_org_stripped_flair,
                     affine=path_affine_mni_flair,
