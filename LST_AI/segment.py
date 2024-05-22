@@ -91,7 +91,8 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
     # Load and preprocess images
     t1_nib = nib.load(mni_t1)
     t1 = t1_nib.get_fdata()
-    flair = nib.load(mni_flair).get_fdata()
+    flair_nib = nib.load(mni_flair)
+    flair = flair_nib.get_fdata()
 
     t1, shape_lst = adapt_shape(t1)
     flair, _ = adapt_shape(flair)
@@ -129,8 +130,8 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
         'constant', constant_values=0.
     )
     nib.save(nib.Nifti1Image(out_binary.astype(np.uint8),
-                             t1_nib.affine,
-                             t1_nib.header),
+                             flair_nib.affine,
+                             flair_nib.header),
                              output_segmentation_path)
 
 
