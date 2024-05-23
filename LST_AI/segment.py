@@ -35,7 +35,7 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
         Segmentation threshold to determine the binary mask from the U-Net's
         output. Pixels with values above this threshold in the U-Net output
         will be set to 1 in the binary mask, and others to 0. Default is 0.5.
-    clipping : float, optional
+    clipping : list of floats, optional
         Min and Max values for the np.clip option which applies clipping for 
         the standardization of image intensities. Default is min=0.5 and max=99.5.
 
