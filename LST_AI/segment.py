@@ -9,7 +9,8 @@ import tensorflow as tf
 from LST_AI.custom_tf import load_custom_model
 
 
-def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, device='cpu', input_shape=(192,192,192), threshold=0.5):
+def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, 
+                      device='cpu', input_shape=(192,192,192), threshold=0.5, clipping=(0.5,99.5)):
     """
     Segment medical images using ensemble of U-Net models.
 
@@ -34,6 +35,9 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, d
         Segmentation threshold to determine the binary mask from the U-Net's
         output. Pixels with values above this threshold in the U-Net output
         will be set to 1 in the binary mask, and others to 0. Default is 0.5.
+    clipping : list of floats, optional
+        Min and Max values for the np.clip option which applies clipping for 
+        the standardization of image intensities. Default is min=0.5 and max=99.5.
 
     Returns:
     --------
@@ -63,11 +67,13 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, d
 
         return img_arr_cropped.astype(np.float32), [difference_0_l,difference_0_r,difference_1_l,difference_1_r,difference_2_l,difference_2_r]
 
-    def preprocess_intensities(img_arr):
+    def preprocess_intensities(img_arr, clipping):
         #Standardize image intensities to [0;1]
         temp_bm = np.zeros(img_arr.shape)
         temp_bm[img_arr != 0] = 1
-        img_arr = np.clip(img_arr, np.percentile(img_arr[temp_bm != 0],0.5),np.percentile(img_arr[temp_bm != 0],99.5) )
+        img_arr = np.clip(img_arr, 
+                          a_min=np.percentile(img_arr[temp_bm != 0],clipping[0]),
+                          a_max=np.percentile(img_arr[temp_bm != 0],clipping[1]) )
         img_arr -= img_arr[temp_bm == 1].min()
         img_arr = img_arr / img_arr[temp_bm == 1].max()
         img_arr *= temp_bm
@@ -85,13 +91,14 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, d
     # Load and preprocess images
     t1_nib = nib.load(mni_t1)
     t1 = t1_nib.get_fdata()
-    flair = nib.load(mni_flair).get_fdata()
+    flair_nib = nib.load(mni_flair)
+    flair = flair_nib.get_fdata()
 
     t1, shape_lst = adapt_shape(t1)
     flair, _ = adapt_shape(flair)
 
-    t1 = preprocess_intensities(t1)
-    flair = preprocess_intensities(flair)
+    t1 = preprocess_intensities(t1, clipping)
+    flair = preprocess_intensities(flair, clipping)
 
     joint_seg = np.zeros(t1.shape)
     print(f"Running segmentation on {tf_device}.")
@@ -123,8 +130,8 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, d
         'constant', constant_values=0.
     )
     nib.save(nib.Nifti1Image(out_binary.astype(np.uint8),
-                             t1_nib.affine,
-                             t1_nib.header),
+                             flair_nib.affine,
+                             flair_nib.header),
                              output_segmentation_path)
 
 
