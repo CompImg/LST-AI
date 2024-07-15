@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     git \
     wget \
+    libeigen3-dev \
     unzip
 
 # copied from https://stackoverflow.com/a/76170605/3485363
@@ -58,18 +59,19 @@ RUN git clone https://github.com/InsightSoftwareConsortium/ITK.git /ITK
 WORKDIR /ITK
 
 # Checkout the specific version
-RUN git checkout v5.1.2
+RUN git checkout v5.2.1
 
 # Create and navigate to the build directory
 RUN mkdir -p /ITK/build
 WORKDIR /ITK/build
 
+RUN apt-get install libexpat1-dev libgtest-dev libhdf5-dev libtiff-dev libvtkgdcm-dev -y
+
 # Run CMake to configure and build ITK
 RUN cmake -DModule_ITKPNG=ON \
-          -DITK_USE_SYSTEM_PNG=ON \
           -DBUILD_TESTING=OFF \
-          -DBUILD_SHARED_LIBS=OFF \
           -DCMAKE_BUILD_TYPE=Release ..
+
 # run build process
 RUN make -j ${BUILD_JOBS}
 RUN make install
