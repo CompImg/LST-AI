@@ -108,7 +108,8 @@ WORKDIR /root/hd-bet_params/
 RUN unzip data.zip && rm data.zip
 
 WORKDIR /custom_apps/lst_directory
-RUN git clone https://github.com/jqmcginnis/LST-AI/
+RUN git clone https://github.com/CompImg/LST-AI/
+
 WORKDIR /custom_apps/lst_directory/LST-AI
 RUN git pull origin main
 RUN git checkout v1.1.0
