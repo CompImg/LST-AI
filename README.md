@@ -147,28 +147,18 @@ We provide three different modes:
 
 ### Dockerfile and Dockerhub
 
-While the installation and usage require internet access to install python packages and to download the weights and atlas, we understand that some researchers prefer to use lst-ai offline. Thus, we decided to provide lst-ai as a CPU-/GPU-enabled docker container, which can be compiled using our scripts.
-As CUDA version rapidly evolve, we do not provide the docker containers as independent release, but ask you to build these with the provided Dockerfiles. For the GPU container, please adjust the CUDA version according to your hardware setup.
+While the installation and usage require internet access to install python packages and to download the weights and atlas, we understand that some researchers prefer to use lst-ai offline. Thus, we have decided to provide lst-ai as a CPU-/GPU-enabled docker container, which can be compiled using our scripts (for instructions please check the docker directory). If, instead of building the docker yourself, you would just rather use it, you can pull it from dockerhub instead.
+
+While we used to maintain jqmcginnis/lst-ai_cpu, we encourage everyone to use the unified jqmcginnis/lst-ai instead (CPU/GPU enabled), featuring the newest LST-AI version. 
+You can pull it from dockerhub via executing:
+
+```bash
+docker pull jqmcginnis/lst-ai:latest
+```
 
 ### Running the LST-AI Docker Container
-Once you have built your Docker image using the Dockerfile provided (c.f. directories `cpu` or `gpu`), you can run the container using the `docker run` command. Here are the steps to bind mount your files and retrieve the results:
+Once you have pulled (or built) your Docker image using the Dockerfile provided you can run the container using the `docker run` command. Here are the steps to bind mount your files and retrieve the results:
 
-#### Build the Docker Image
-Clone the repository:
-```bash
-git clone https://github.com/CompImg/LST-AI/
-cd LST-AI
-```
-If you haven't already, build your CPU or GPU Docker image:
-
-```
-cd cpu
-docker build -t lst-ai_cpu:latest .
-```
-```
-cd gpu
-docker build -t lst-ai_gpu:latest .
-```
 #### Run the Docker Container with Bind Mounts
 The primary mechanism for sharing files between your host system and the Docker container is the `-v` or `--volume` flag, which specifies a bind mount.
 
