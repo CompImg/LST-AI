@@ -108,6 +108,7 @@ WORKDIR /root/hd-bet_params/
 RUN unzip data.zip && rm data.zip
 
 WORKDIR /custom_apps/lst_directory
+RUN apt-get install python3-dev -y
 RUN git clone https://github.com/CompImg/LST-AI/
 
 WORKDIR /custom_apps/lst_directory/LST-AI
