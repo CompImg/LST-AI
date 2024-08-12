@@ -10,7 +10,8 @@ from LST_AI.custom_tf import load_custom_model
 
 
 def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, 
-                      device='cpu', input_shape=(192,192,192), threshold=0.5, clipping=(0.5,99.5)):
+                      output_prob_path, output_prob1_path, output_prob2_path, output_prob3_path, 
+                      device='cpu', probmap=False, input_shape=(192,192,192), threshold=0.5, clipping=(0.5,99.5)):
     """
     Segment medical images using ensemble of U-Net models.
 
@@ -103,6 +104,9 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
     joint_seg = np.zeros(t1.shape)
     print(f"Running segmentation on {tf_device}.")
 
+    # define list of model probability maps
+    output_prob_list = [output_prob1_path, output_prob2_path, output_prob3_path]
+
     for i, model in enumerate(unet_mdls):
         with tf.device(tf_device):
             print(f"Running model {i}. ")
@@ -114,12 +118,31 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
             out_seg = mdl(img_image)[0]  # Will return a len(2) list of [out_seg, out_ds]
         out_seg = np.squeeze(out_seg)
 
-        out_binary = np.zeros(t1.shape)
-        out_binary[out_seg > threshold] = 1
+        if probmap:
+            # add zero values to the probability map
+            out_seg_pad = np.pad(out_seg,
+                                 ((shape_lst[0], shape_lst[1]), (shape_lst[2], shape_lst[3]), (shape_lst[4], shape_lst[5])),
+                                 'constant', constant_values=0.)
+            # save the probability map
+            nib.save(nib.Nifti1Image(out_seg_pad.astype(np.float32),
+                                    flair_nib.affine,
+                                    flair_nib.header),
+                                    output_prob_list[i])
 
         joint_seg += out_seg
 
     joint_seg /= len(unet_mdls)
+
+    if probmap:
+        # add zero values to the probability map
+        joint_seg_pad = np.pad(joint_seg,
+                               ((shape_lst[0], shape_lst[1]), (shape_lst[2], shape_lst[3]), (shape_lst[4], shape_lst[5])),
+                               'constant', constant_values=0.0)
+        # save the probability map
+        nib.save(nib.Nifti1Image(joint_seg_pad.astype(np.float32),
+                                flair_nib.affine,
+                                flair_nib.header),
+                                output_prob_path)
 
     out_binary = np.zeros(t1.shape)
     out_binary[joint_seg > threshold] = 1
