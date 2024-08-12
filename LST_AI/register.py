@@ -79,7 +79,7 @@ def rigid_reg(moving, fixed, affine, destination, n_threads):
     subprocess.run(shlex.split(warp_call), check=True)
 
 
-def apply_warp(image_org_space, affine, origin, target, reverse=False, n_threads=1):
+def apply_warp_label(image_org_space, affine, origin, target, reverse=False, n_threads=1):
     """
     Warps an image between its original space and target space.
 
@@ -101,6 +101,33 @@ def apply_warp(image_org_space, affine, origin, target, reverse=False, n_threads
     else:
         warp_call = (
             f"greedy -threads {n_threads} -d 3 -rf {image_org_space} -ri LABEL 0.2vox -rm {origin} "
+            f"{target} -r {affine}"
+        )
+
+    subprocess.run(shlex.split(warp_call), check=True)
+
+def apply_warp_interp(image_org_space, affine, origin, target, reverse=False, n_threads=1):
+    """
+    Warps an image between its original space and target space adn applies linear interpolation.
+
+    Parameters:
+    image_org_space: str - The image in its original space.
+    affine: str - The affine transformation file.
+    origin: str - The origin image file.
+    target: str - The target image file.
+    reverse: bool - If True, warps from target space to original space; otherwise,
+            from original space to target space.
+    threads : int, optional
+        Number of threads to use for registration. Default is 1.
+    """
+    if reverse:
+        warp_call = (
+            f"greedy -threads {n_threads} -d 3 -rf {image_org_space} -ri LINEAR -rm {origin} "
+            f"{target} -r {affine},-1"
+        )
+    else:
+        warp_call = (
+            f"greedy -threads {n_threads} -d 3 -rf {image_org_space} -ri LINEAR -rm {origin} "
             f"{target} -r {affine}"
         )
 
