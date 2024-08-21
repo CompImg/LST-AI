@@ -14,9 +14,9 @@ LST-AI was collaboratively developed by the Department of Neurology and Departme
 * While LST depends on MATLAB, we offer LST-AI as a python-based tool which makes it available to the whole community.
 * We suggest using LST or LST-AI according to your type of data:
     * A 3D T1-weighted and a 3D FLAIR sequence are available: (new) LST-AI
-    * Only a 3D FLAIR sequence is available: (old) [LST]((https://www.applied-statistics.de/lst.html) (LPA)
+    * Only a 3D FLAIR sequence is available: (old) [LST](https://www.applied-statistics.de/lst.html) (LPA)
     * Only a 3D T1-weighted sequence is available: not covered by any LST(-AI) version
-    * If a 3D T1-weighted and a non-3D FLAIR sequence are available, please try both (new) LST-AI or (old) [LST]((https://www.applied-statistics.de/lst.html)) (LGA or LPA)
+    * If a 3D T1-weighted and a non-3D FLAIR sequence are available, please try both (new) LST-AI or (old) [LST](https://www.applied-statistics.de/lst.html) (LGA or LPA)
 
 
 ## Usage
@@ -119,7 +119,7 @@ cd ..
 
 ### Usage of LST-AI
 
-Once installed, lst can be used as a simple command line tool. LST-AI expects you to provide **zipped NIFTIs (*.nii.gz)** as input and assumes the input images **NOT** to be **skull-stripped**. If you already have skull-stripped images, **do not forget** to provide the **--skull-stripped** option, otherwise, the segmentation performance will be severely affected.
+Once installed, LST-AI can be used as a simple command line tool. LST-AI expects you to provide **zipped NIFTIs (*.nii.gz)** as input and assumes the input images **NOT** to be **skull-stripped**. If you already have skull-stripped images, **do not forget** to provide the **--skull-stripped** option, otherwise, the segmentation performance will be severely affected.
 
 LST-AI always requires you to provide a `--t1` T1w and `--flair` FLAIR image and to specify an output path for the segmentation results `--output`. If you would like to keep all processing files, for example, the segmentations and skull-stripped images in the MNI152 space, provide a directory via `--temp`.
 
@@ -181,6 +181,12 @@ __Note__: Ensure your paths are absolute, as Docker requires absolute paths for 
 #### Extending and modifying LST-AI for your custom code and pipeline
 
 We invite you to tailor LST-AI to your pipeline and application, please have a look at our [sources](LST-AI).
+
+### BIDS Compliance with LST-AI
+
+To ensure maximum flexibility for our user base, LST-AI does not natively enforce BIDS-compliant file-naming conventions. This decision allows users to work seamlessly with both BIDS and non-BIDS datasets.
+
+However, for those who wish to utilize LST-AI within a BIDS-compliant workflow, we have provided an [example repository](https://github.com/twiltgen/LST-AI_BIDS) that demonstrates the integration of LST-AI with BIDS-compliant data. This example reflects the BIDS-compliant usage of LST-AI that we are currently using in our internal database.
 
 ### Citation
 
