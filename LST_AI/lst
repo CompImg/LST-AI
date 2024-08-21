@@ -265,7 +265,8 @@ if __name__ == "__main__":
                          seg_native=path_orig_segmentation,
                          out_atlas_warp=atlas_warp,
                          out_atlas_mask_warped=atlas_mask_warped,
-                         out_annotated_native=path_orig_annotated_segmentation)
+                         out_annotated_native=path_orig_annotated_segmentation,
+                         n_threads=args.threads)
 
         shutil.copy(path_orig_annotated_segmentation,
                     os.path.join(args.output, filename_output_annotated_segmentation))
@@ -404,7 +405,8 @@ if __name__ == "__main__":
                              seg_native=path_mni_segmentation,
                              out_atlas_warp=atlas_warp,
                              out_atlas_mask_warped=atlas_mask_warped,
-                             out_annotated_native=path_mni_annotated_segmentation)
+                             out_annotated_native=path_mni_annotated_segmentation,
+                             n_threads=args.threads)
 
             # warp results back to original FLAIR space
             apply_warp_label(image_org_space=path_org_stripped_flair,
