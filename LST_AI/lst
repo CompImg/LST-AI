@@ -8,12 +8,17 @@ REQUIRES
 > MNI atlas files
 > Model files
 """
+
 import os
 import multiprocessing
 import sys
 import tempfile
 import shutil
 import argparse
+
+# to make LST-AI more deterministic
+from LST_AI.lst_config import lst_set_seed
+lst_set_seed(42)
 
 from LST_AI.strip import run_hdbet, apply_mask
 from LST_AI.register import mni_registration, rigid_reg, apply_warp_label, apply_warp_interp
