@@ -1,17 +1,68 @@
 import os
 import logging
 logging.getLogger('tensorflow').disabled = True
-import nibabel as nib
 import numpy as np
+import nibabel as nib
+from scipy.ndimage import label, generate_binary_structure
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 
 from LST_AI.custom_tf import load_custom_model
 
 
+# stolen and adapted from SCT 6.5 math.py line 421
+def remove_small_objects(data, dim_lst, unit='mm3', thr=0):
+    """Removes all unconnected objects smaller than the minimum specified size.
+
+    Adapted from:
+    https://github.com/ivadomed/ivadomed/blob/master/ivadomed/postprocessing.py#L327
+    and
+    https://github.com/ivadomed/ivadomed/blob/master/ivadomed/postprocessing.py#L224
+
+    Args:
+        data (ndarray): Input data.
+        dim_lst (list): Dimensions of a voxel in mm.
+        unit (str): Indicates the units of the objects: "mm3" or "vox"
+        thr (float): Minimal object size to keep in input data.
+
+    Returns:
+        ndarray: Array with small objects.
+    """
+    print(f"Thresholding lesions at [mm3]:{np.prod(dim_lst)}")
+
+    px, py, pz = dim_lst
+    # if there are more than 1 classes, `data` is a 4D array with the 1st
+    # dimension representing number of classes. For e.g.
+    # for spinal cord (SC) segmentation, num_classes=1,
+    # for region-based models with both SC and lesion segmentations, num_classes=2
+    num_classes = data.shape[0] if len(data.shape) == 4 else 1
+
+    # structuring element that defines feature connections
+    bin_structure = generate_binary_structure(3, 2)
+
+    data_label, n = label(data, structure=bin_structure)
+
+    if unit == 'mm3':
+        size_min = np.round(thr / (px * py * pz))
+    else:
+        print('Please choose a different unit for removeSmall. Choices: vox or mm3')
+        exit()
+
+    for idx in range(1, n + 1):
+        data_idx = (data_label == idx).astype(int)
+        n_nonzero = np.count_nonzero(data_idx)
+
+        if n_nonzero < size_min:
+            data[data_label == idx] = 0
+
+    return data
+
+
+
 def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path, 
                       output_prob_path, output_prob1_path, output_prob2_path, output_prob3_path, 
-                      device='cpu', probmap=False, input_shape=(192,192,192), threshold=0.5, clipping=(0.5,99.5)):
+                      device='cpu', probmap=False, input_shape=(192,192,192), threshold=0.5, clipping=(0.5,99.5), lesion_thr=0):
     """
     Segment medical images using ensemble of U-Net models.
 
@@ -152,6 +203,9 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
         ((shape_lst[0], shape_lst[1]), (shape_lst[2], shape_lst[3]), (shape_lst[4], shape_lst[5])),
         'constant', constant_values=0.
     )
+
+    out_binary = remove_small_objects(out_binary, flair_nib.header.get_zooms(), unit="mm3", thr=int(lesion_thr))
+
     nib.save(nib.Nifti1Image(out_binary.astype(np.uint8),
                              flair_nib.affine,
                              flair_nib.header),

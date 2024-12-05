@@ -88,6 +88,12 @@ if __name__ == "__main__":
                         type=float,
                         default=0.5)
     
+    parser.add_argument('--lesion_threshold',
+                        dest='lesion_threshold',
+                        help='minimum lesion size',
+                        type=int,
+                        default=0)
+        
     parser.add_argument('--clipping',
                         dest='clipping',
                         help='Clipping (min & max) for standardization of image intensities (default: 0.5 99.5).',
@@ -357,7 +363,8 @@ if __name__ == "__main__":
                           output_prob3_path=probmap_mni_model3,
                           input_shape=(192,192,192),
                           threshold=args.threshold,
-                          clipping=(min_clip, max_clip))
+                          clipping=(min_clip, max_clip),
+                          lesion_thr=int(args.lesion_threshold))
         
         # warp probability maps to FLAIR space if flag is set
         if args.probability_map:
