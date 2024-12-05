@@ -394,6 +394,7 @@ if __name__ == "__main__":
                               n_threads=args.threads)
 
         # warp segmentation back to original FLAIR space
+        # for now, we do not threshold the lesion sizes of the warped native image
         apply_warp_label(image_org_space=path_org_stripped_flair,
                          affine=path_affine_mni_flair,
                          target=path_orig_segmentation,
