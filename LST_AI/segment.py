@@ -32,11 +32,6 @@ def remove_small_objects(data, dim_lst, unit='mm3', thr=0):
     print(f"Thresholding lesions at [mm3]:{np.prod(dim_lst)}")
 
     px, py, pz = dim_lst
-    # if there are more than 1 classes, `data` is a 4D array with the 1st
-    # dimension representing number of classes. For e.g.
-    # for spinal cord (SC) segmentation, num_classes=1,
-    # for region-based models with both SC and lesion segmentations, num_classes=2
-    num_classes = data.shape[0] if len(data.shape) == 4 else 1
 
     # structuring element that defines feature connections
     bin_structure = generate_binary_structure(3, 2)
