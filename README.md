@@ -66,6 +66,7 @@ cd ..
 ```bash
 git clone https://github.com/MIC-DKFZ/HD-BET
 cd HD-BET
+git checkout ae160681324d524db3578e4135bf781f8206e146
 pip install -e .
 cd ..
 ```
