@@ -1,5 +1,5 @@
-# Use a CUDA 12.1 compatible base image
-FROM nvidia/cuda:12.1.1-runtime-ubuntu20.04
+# Use a CUDA 12.1 compatible base image with Ubuntu 22.04
+FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
 
 # Prevents prompts from asking for user input during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -9,23 +9,16 @@ RUN apt-get update && apt-get install -y \
     git \
     wget \
     libeigen3-dev \
-    python3.9 python3.9-dev python3.9-venv \
+    python3 python3-dev python3-venv python3-pip \
     unzip \
     curl
 
-# Install pip for Python 3.9
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
-
-# Ensure python3 and pip3 point to Python 3.9
-RUN ln -fs /usr/bin/python3.9 /usr/bin/python && \
-    ln -fs /usr/local/bin/pip /usr/bin/pip3
-
 # Verify Python version
-RUN python --version && pip --version
+RUN python3 --version && pip3 --version
 
 # Install torch and tensorflow
-RUN pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
-RUN pip install tensorflow==2.13.1
+RUN pip3 install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
+RUN pip3 install tensorflow==2.13.1
 
 # Install prerequisites for VTK and ITK
 RUN apt-get update && \
@@ -80,7 +73,7 @@ WORKDIR /custom_apps/lst_directory/LST-AI
 RUN git pull origin main
 RUN git checkout jqm/docker
 
-RUN pip install -e .
+RUN pip3 install -e .
 
 # Retrieve model weights for LST-AI
 WORKDIR /custom_apps/lst_directory/
@@ -94,7 +87,7 @@ WORKDIR /custom_apps/lst_directory
 RUN git clone https://github.com/MIC-DKFZ/HD-BET
 WORKDIR /custom_apps/lst_directory/HD-BET
 RUN git checkout 1fb6cb784a2c270b96f424e792de78fd74323365
-RUN pip install -e .
+RUN pip3 install -e .
 
 # Retrieve model weights for HD-BET
 WORKDIR /custom_apps/lst_directory/
