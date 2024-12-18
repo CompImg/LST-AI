@@ -115,7 +115,7 @@ RUN unzip data.zip && rm data.zip
 WORKDIR /custom_apps/lst_directory
 RUN git clone https://github.com/MIC-DKFZ/HD-BET
 WORKDIR /custom_apps/lst_directory/HD-BET
-RUN git checkout ae160681324d524db3578e4135bf781f8206e146
+RUN git checkout 1fb6cb784a2c270b96f424e792de78fd74323365
 RUN pip install -e .
 
 # Retrieve model weights for HD-BET
