@@ -97,6 +97,7 @@ RUN make install
 WORKDIR /custom_apps/lst_directory
 RUN git clone https://github.com/MIC-DKFZ/HD-BET
 WORKDIR /custom_apps/lst_directory/HD-BET
+RUN git checkout ae160681324d524db3578e4135bf781f8206e146
 RUN pip install -e .
 
 # Retrieve model weights for HD-BET
