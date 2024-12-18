@@ -3,7 +3,7 @@ import shlex
 import nibabel as nib
 import numpy as np
 
-def run_hdbet(input_image, output_image, device, mode="accurate"):
+def run_hdbet(input_image, output_image, device):
     """
     Runs the HD-BET tool to perform brain extraction on an input image.
 
@@ -11,7 +11,6 @@ def run_hdbet(input_image, output_image, device, mode="accurate"):
     input_image (str): Path to the input image file.
     output_image (str): Path for the output image file.
     device (str): The device to use for computation, either a GPU device number or 'cpu'.
-    mode (str, optional): Operation mode of HD-BET. Can be 'accurate' or 'fast'. Default is 'accurate'.
 
     Raises:
     AssertionError: If an unknown mode is provided.
@@ -19,12 +18,10 @@ def run_hdbet(input_image, output_image, device, mode="accurate"):
     This function utilizes HD-BET, a tool for brain extraction from MRI images. Depending on the chosen mode
     and device, it executes the appropriate command.
     """
-    assert mode in ["accurate","fast"], 'Unknown HD-BET mode. Please choose either "accurate" or "fast"'
-
     if "cpu" in str(device).lower():
-        bet_call = f"hd-bet -i {input_image} -device cpu -mode {mode} -tta 0 -o {output_image}"
+        bet_call = f"hd-bet -i {input_image} -o {output_image} -device cpu --disable_tta"
     else:
-        bet_call = f"hd-bet -i {input_image} -device {device} -mode accurate -tta 1 -o {output_image}"
+        bet_call = f"hd-bet -i {input_image} -o {output_image} -device {device}"
 
     subprocess.run(shlex.split(bet_call), check=True)
 

@@ -101,11 +101,6 @@ if __name__ == "__main__":
                         type=str,
                         default=('0.5','99.5'))
 
-    parser.add_argument('--fast-mode',
-                        action='store_true',
-                        dest='fast',
-                        help='Only use one model for hd-bet.')
-    
     parser.add_argument('--probability_map',
                         action='store_true',
                         dest='probability_map',
@@ -243,11 +238,7 @@ if __name__ == "__main__":
                       n_threads=args.threads)
 
             # strip only T1w
-            if args.fast:
-                run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device, mode="fast")
-            else:
-                run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device, mode="accurate")
-
+            run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device)
             # move processed mask to correct naming convention
             hdbet_mask = path_org_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
             shutil.move(hdbet_mask, path_orig_brainmask_flair)
@@ -311,10 +302,7 @@ if __name__ == "__main__":
                              n_threads=args.threads)
 
             # then skull strip T1w
-            if args.fast:
-                run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device, mode="fast")
-            else:
-                run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device, mode="accurate")
+            run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device)
 
             # move processed mask to correct naming convention
             hdbet_mask = path_mni_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
