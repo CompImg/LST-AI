@@ -9,15 +9,15 @@ RUN apt-get update && apt-get install -y \
     git \
     wget \
     libeigen3-dev \
-    python3.8 python3.8-dev python3.8-venv \
+    python3.9 python3.9-dev python3.9-venv \
     unzip \
     curl
 
-# Install pip for Python 3.8
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.8
+# Install pip for Python 3.9
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
 
-# Ensure python3 and pip3 point to Python 3.8
-RUN ln -fs /usr/bin/python3.8 /usr/bin/python && \
+# Ensure python3 and pip3 point to Python 3.9
+RUN ln -fs /usr/bin/python3.9 /usr/bin/python && \
     ln -fs /usr/local/bin/pip /usr/bin/pip3
 
 # Verify Python version
