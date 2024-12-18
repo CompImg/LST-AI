@@ -113,7 +113,6 @@ RUN git clone https://github.com/CompImg/LST-AI/
 
 WORKDIR /custom_apps/lst_directory/LST-AI
 RUN git pull origin main
-RUN git checkout v1.1.0
 
 # pip or pip3 depending on your system
 RUN pip install -e .

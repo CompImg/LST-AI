@@ -37,7 +37,7 @@ docker buildx inspect --bootstrap
 Navigate to the directory where your Dockerfile is located, then build and push the image for both platforms. Replace path/to/dockerfile with the actual path to your Dockerfile if it's not in the current directory:
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64/v8 -t jqmcginnis/lst-ai --push --build-arg BUILD_JOBS=8 .
+docker buildx build --platform linux/amd64,linux/arm64/v8 -t jqmcginnis/lst-ai:v1.1.0 --push --build-arg BUILD_JOBS=8 .
 ```
 This command will build the image for amd64 and arm64/v8 architectures and push it to Docker Hub under the repository jqmcginnis/lst-ai. It may take several hpurs (!).
 
@@ -46,6 +46,6 @@ This command will build the image for amd64 and arm64/v8 architectures and push 
 Navigate to the directory where your Dockerfile is located, then build and push the image for both platforms. Replace path/to/dockerfile with the actual path to your Dockerfile if it's not in the current directory:
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64/v8 -t jqmcginnis/lst-ai --push .
+docker buildx build --platform linux/amd64,linux/arm64/v8 -t jqmcginnis/lst-ai:v1.1.0 --push .
 ```
 This command will build the image for amd64 and arm64/v8 architectures and push it to Docker Hub under the repository jqmcginnis/lst-ai. It may take several hours (!).
