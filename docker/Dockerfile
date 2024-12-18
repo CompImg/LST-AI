@@ -9,18 +9,23 @@ RUN apt-get update && apt-get install -y \
     git \
     wget \
     libeigen3-dev \
-    python3-dev \
-    unzip
+    python3.8 python3.8-dev python3.8-venv \
+    unzip \
+    curl
 
-# Setup Python 3.10
-RUN apt-get update && apt-get install -y software-properties-common && \
-    add-apt-repository -y ppa:deadsnakes/ppa && \
-    apt-get install -y python3.10 curl && \
-    curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+# Install pip for Python 3.8
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.8
 
-RUN pip3 install --upgrade requests
-RUN ln -fs /usr/bin/python3.10 /usr/bin/python
-RUN python --version
+# Ensure python3 and pip3 point to Python 3.8
+RUN ln -fs /usr/bin/python3.8 /usr/bin/python && \
+    ln -fs /usr/local/bin/pip /usr/bin/pip3
+
+# Verify Python version
+RUN python --version && pip --version
+
+# Install torch and tensorflow
+RUN pip install torch==2.1.0+cu121 torchvision==0.15.2+cu121 torchaudio==2.1.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip install tensorflow==2.13.1
 
 # Install prerequisites for VTK and ITK
 RUN apt-get update && \
