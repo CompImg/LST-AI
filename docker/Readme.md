@@ -20,6 +20,7 @@ Enter your Docker Hub username and password when prompted.
 Docker Buildx is an extended build feature that supports building multi-platform images. To ensure it is enabled, run:
 
 ```bash
+docker buildx rm mybuilder
 docker buildx create --use --name mybuilder
 ```
 
