@@ -24,7 +24,7 @@ RUN ln -fs /usr/bin/python3.8 /usr/bin/python && \
 RUN python --version && pip --version
 
 # Install torch and tensorflow
-RUN pip install torch==2.1.0+cu121 torchvision==0.15.2+cu121 torchaudio==2.1.0+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
 RUN pip install tensorflow==2.13.1
 
 # Install prerequisites for VTK and ITK
