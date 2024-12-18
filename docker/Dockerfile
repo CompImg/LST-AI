@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     git \
     wget \
     libeigen3-dev \
+    python3-dev -y \
     unzip
 
 # copied from https://stackoverflow.com/a/76170605/3485363
@@ -20,9 +21,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive \
 RUN pip3 install --upgrade requests
 RUN ln -fs /usr/bin/python3.10 /usr/bin/python
 RUN python --version
-
-# # Setup LST-AI
-RUN mkdir -p /custom_apps/lst_directory
 
 # Install prerequisites
 # c.f. https://greedy.readthedocs.io/en/latest/install.html#compiling-from-source-code
@@ -93,6 +91,25 @@ RUN cmake -DITK_DIR=/ITK/build \
 RUN make -j ${BUILD_JOBS}
 RUN make install
 
+# # Setup LST-AI
+RUN mkdir -p /custom_apps/lst_directory
+
+WORKDIR /custom_apps/lst_directory
+RUN git clone https://github.com/CompImg/LST-AI/
+
+WORKDIR /custom_apps/lst_directory/LST-AI
+RUN git pull origin main
+
+# pip or pip3 depending on your system
+RUN pip install -e .
+
+# Retrieve model weights and files for LST-AI
+WORKDIR /custom_apps/lst_directory/
+RUN wget -O /custom_apps/lst_directory/LST-AI/LST_AI/data.zip \
+    https://github.com/CompImg/LST-AI/releases/download/v1.1.0/lst_data.zip
+WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
+RUN unzip data.zip && rm data.zip
+
 # Install HD-BET
 WORKDIR /custom_apps/lst_directory
 RUN git clone https://github.com/MIC-DKFZ/HD-BET
@@ -108,22 +125,6 @@ RUN wget -O /root/hd-bet_params/data.zip \
 WORKDIR /root/hd-bet_params/
 RUN unzip data.zip && rm data.zip
 
-WORKDIR /custom_apps/lst_directory
-RUN apt-get install python3-dev -y
-RUN git clone https://github.com/CompImg/LST-AI/
-
-WORKDIR /custom_apps/lst_directory/LST-AI
-RUN git pull origin main
-
-# pip or pip3 depending on your system
-RUN pip install -e .
-
-# Retrieve model weights and files for LST-AI
-WORKDIR /custom_apps/lst_directory/
-RUN wget -O /custom_apps/lst_directory/LST-AI/LST_AI/data.zip \
-    https://github.com/CompImg/LST-AI/releases/download/v1.1.0/lst_data.zip
-WORKDIR /custom_apps/lst_directory/LST-AI/LST_AI/
-RUN unzip data.zip && rm data.zip
 
 # Make directories for easily mounting data
 # You may change these to your liking
