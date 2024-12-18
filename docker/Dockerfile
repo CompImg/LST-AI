@@ -1,5 +1,5 @@
 # Use a CUDA 12.1 compatible base image
-FROM nvidia/cuda:12.1.1-runtime-ubuntu22.04
+FROM nvidia/cuda:12.1.1-runtime-ubuntu20.04
 
 # Prevents prompts from asking for user input during package installation
 ENV DEBIAN_FRONTEND=noninteractive
