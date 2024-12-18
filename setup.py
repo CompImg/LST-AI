@@ -13,7 +13,7 @@ setup(
         'benedict.wiestler@tum.de'
     ],
     keywords=['lesion_segmentation', 'ms', 'lst', 'ai'],
-    python_requires='>=3.8,<3.10',
+    python_requires='>=3.8,<3.11',
     install_requires=[
         'numpy<1.24.4',
         'pillow',
