@@ -41,10 +41,6 @@ def parse_arguments():
                         action='store_true',
                         dest='segment_only',
                         help='Only perform the segmentation, and skip lesion annotation.')
-    parser.add_argument('--annotate_only',
-                        action='store_true',
-                        dest='annotate_only',
-                        help='Only annotate lesion files without segmentation of lesions.')
     parser.add_argument('--stripped',
                         action='store_true',
                         dest='stripped',
@@ -112,8 +108,6 @@ def add_optional_args(command, args):
     """Add optional arguments to the command if they are specified."""
     if args.segment_only:
         command.append('--segment_only')
-    if args.annotate_only:
-        command.append('--annotate_only')
     if args.stripped:
         command.append('--stripped')
     if args.threshold is not None:
