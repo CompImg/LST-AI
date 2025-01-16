@@ -37,11 +37,6 @@ def parse_arguments():
                         dest='save_temp',
                         action='store_true',
                         help='Store temp files')
-    parser.add_argument('--existing_seg',
-                        dest='existing_seg',
-                        default='',
-                        help='Path to output segmentation image (will be saved in FLAIR space)',
-                        type=str)
     parser.add_argument('--segment_only',
                         action='store_true',
                         dest='segment_only',
@@ -115,8 +110,6 @@ def compile_stats(output_dir: str):
 
 def add_optional_args(command, args):
     """Add optional arguments to the command if they are specified."""
-    if args.existing_seg:
-        command.extend(['--existing_seg', args.existing_seg])
     if args.segment_only:
         command.append('--segment_only')
     if args.annotate_only:
