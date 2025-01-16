@@ -50,11 +50,6 @@ def parse_arguments():
                         help='Threshold for binarizing the joint segmentation (default: 0.5)',
                         type=float,
                         default=0.5)
-    parser.add_argument('--lesion_threshold',
-                        dest='lesion_threshold',
-                        help='minimum lesion size',
-                        type=int,
-                        default=0)
     parser.add_argument('--clipping',
                         dest='clipping',
                         help='Clipping (min & max) for standardization of image intensities (default: 0.5 99.5).',
@@ -112,8 +107,6 @@ def add_optional_args(command, args):
         command.append('--stripped')
     if args.threshold is not None:
         command.extend(['--threshold', str(args.threshold)])
-    if args.lesion_threshold is not None:
-        command.extend(['--lesion_threshold', str(args.lesion_threshold)])
     if args.clipping is not None:
         command.extend(['--clipping'] + [str(float(x)) for x in args.clipping])
     if args.fast:
