@@ -157,7 +157,7 @@ While we used to maintain jqmcginnis/lst-ai_cpu, we encourage everyone to use th
 You can pull it from dockerhub via executing:
 
 ```bash
-docker pull jqmcginnis/lst-ai:latest
+docker pull jqmcginnis/lst-ai:v1.2.0
 ```
 
 ### Running the LST-AI Docker Container
