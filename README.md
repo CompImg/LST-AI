@@ -1,5 +1,7 @@
 # LST-AI - Deep Learning Ensemble for Accurate MS Lesion Segmentation
 
+> 2026-05-06: Excited to announce **LST-AI has received the [NeuroImage: Clinical Editors’ Choice Award 2025 🏆](https://www.sciencedirect.com/journal/neuroimage-clinical/about/editor-choice/neuroimage-clinical-editors-choice-award-2025-tun-wiltgen)**
+
 Welcome to our codebase for LST-AI, the deep learning-based successor of the original [Lesion Segmentation Toolbox (LST)](https://www.applied-statistics.de/lst.html) by [Schmidt et al.](https://www.sciencedirect.com/science/article/abs/pii/S1053811911013139)
 LST-AI was collaboratively developed by the Department of Neurology and Department of Neuroradiology, Klinikum rechts der Isar at the Technical University of Munich, and the Department of Computer Science at the Technical University of Munich.
 
