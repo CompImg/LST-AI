@@ -62,7 +62,19 @@ def _make_inference(backend, model_path, device):
     TensorFlow (and vice versa).
     """
     if backend == 'onnx':
-        import onnxruntime as ort
+        try:
+            import onnxruntime as ort
+        except ImportError as exc:
+            # onnxruntime is an install-time extra (see setup.py): 'onnxruntime' (CPU)
+            # and 'onnxruntime-gpu' (CUDA) share the same namespace and can't coexist,
+            # so a backend must be chosen explicitly.
+            raise ImportError(
+                "No ONNX runtime found for the 'onnx' segmentation backend. Install a "
+                "backend:\n"
+                '    pip install "lst-ai[cpu]"   # portable CPU\n'
+                '    pip install "lst-ai[gpu]"   # NVIDIA CUDA (onnxruntime-gpu)\n'
+                "(or `pip install onnxruntime` / `onnxruntime-gpu` directly)."
+            ) from exc
 
         if str(device) == 'cpu':
             providers = ['CPUExecutionProvider']
