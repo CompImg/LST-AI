@@ -1,6 +1,17 @@
 import os
-import subprocess
-import shlex
+
+from picsl_greedy import Greedy3D
+
+
+def _greedy(args):
+    """Run greedy via the picsl_greedy Python API (pip-installable, multi-arch).
+
+    ``Greedy3D().execute`` takes the same greedy command-line argument string as the
+    standalone ``greedy`` binary, so the registration behaviour is unchanged — we
+    just drop the external binary / VTK+ITK compile.
+    """
+    Greedy3D().execute(args)
+
 
 def mni_registration(atlas_t1, path_org_t1, path_org_flair,
                      path_mni_t1, path_mni_flair,
@@ -35,22 +46,17 @@ def mni_registration(atlas_t1, path_org_t1, path_org_flair,
     """
 
     # Register T1 -> Atlas_T1 (6 DOF)
-    rigid_call = (f"greedy -d 3 -a -dof 6 -m NMI -ia-image-centers "
-                  f"-n 100x50x10 -i {atlas_t1} {path_org_t1} -o {path_t1_affine} -threads {n_threads}")
-    subprocess.run(shlex.split(rigid_call), check=True)
-
-    warp_call = (f"greedy -d 3 -rf {atlas_t1} -rm {path_org_t1} "
-                 f"{path_mni_t1} -r {path_t1_affine} -threads {n_threads}")
-    subprocess.run(shlex.split(warp_call), check=True)
+    _greedy(f"-d 3 -a -dof 6 -m NMI -ia-image-centers "
+            f"-n 100x50x10 -i {atlas_t1} {path_org_t1} -o {path_t1_affine} -threads {n_threads}")
+    _greedy(f"-d 3 -rf {atlas_t1} -rm {path_org_t1} "
+            f"{path_mni_t1} -r {path_t1_affine} -threads {n_threads}")
 
     # Register FLAIR -> T1 in atlas space and save the affine for later
-    rigid_call = (f"greedy -d 3 -a -dof 6 -m NMI -ia-image-centers "
-                  f"-n 100x50x10 -i {path_mni_t1} {path_org_flair} -o {path_flair_affine} -threads {n_threads}")
-    subprocess.run(shlex.split(rigid_call), check=True)
+    _greedy(f"-d 3 -a -dof 6 -m NMI -ia-image-centers "
+            f"-n 100x50x10 -i {path_mni_t1} {path_org_flair} -o {path_flair_affine} -threads {n_threads}")
+    _greedy(f"-d 3 -rf {atlas_t1} -rm {path_org_flair} "
+            f"{path_mni_flair} -r {path_flair_affine} -threads {n_threads}")
 
-    warp_call = (f"greedy -d 3 -rf {atlas_t1} -rm {path_org_flair} "
-                 f"{path_mni_flair} -r {path_flair_affine} -threads {n_threads}")
-    subprocess.run(shlex.split(warp_call), check=True)
 
 def rigid_reg(moving, fixed, affine, destination, n_threads):
     """
@@ -70,13 +76,10 @@ def rigid_reg(moving, fixed, affine, destination, n_threads):
         Number of threads used for registration.
     """
     # Register moving -> fixed (6 DOF)
-    rigid_call = (f"greedy -d 3 -a -dof 6 -m NMI -ia-image-centers "
-                  f"-n 100x50x10 -i {fixed} {moving} -o {affine} -threads {n_threads}")
-    subprocess.run(shlex.split(rigid_call), check=True)
-
-    warp_call = (f"greedy -d 3 -rf {fixed} -rm {moving} "
-                 f"{destination} -r {affine} -threads {n_threads}")
-    subprocess.run(shlex.split(warp_call), check=True)
+    _greedy(f"-d 3 -a -dof 6 -m NMI -ia-image-centers "
+            f"-n 100x50x10 -i {fixed} {moving} -o {affine} -threads {n_threads}")
+    _greedy(f"-d 3 -rf {fixed} -rm {moving} "
+            f"{destination} -r {affine} -threads {n_threads}")
 
 
 def apply_warp_label(image_org_space, affine, origin, target, reverse=False, n_threads=1):
@@ -93,22 +96,14 @@ def apply_warp_label(image_org_space, affine, origin, target, reverse=False, n_t
     threads : int, optional
         Number of threads to use for registration. Default is 1.
     """
-    if reverse:
-        warp_call = (
-            f"greedy -threads {n_threads} -d 3 -rf {image_org_space} -ri LABEL 0.2vox -rm {origin} "
-            f"{target} -r {affine},-1"
-        )
-    else:
-        warp_call = (
-            f"greedy -threads {n_threads} -d 3 -rf {image_org_space} -ri LABEL 0.2vox -rm {origin} "
-            f"{target} -r {affine}"
-        )
+    inv = ",-1" if reverse else ""
+    _greedy(f"-threads {n_threads} -d 3 -rf {image_org_space} -ri LABEL 0.2vox -rm {origin} "
+            f"{target} -r {affine}{inv}")
 
-    subprocess.run(shlex.split(warp_call), check=True)
 
 def apply_warp_interp(image_org_space, affine, origin, target, reverse=False, n_threads=1):
     """
-    Warps an image between its original space and target space adn applies linear interpolation.
+    Warps an image between its original space and target space and applies linear interpolation.
 
     Parameters:
     image_org_space: str - The image in its original space.
@@ -120,18 +115,10 @@ def apply_warp_interp(image_org_space, affine, origin, target, reverse=False, n_
     threads : int, optional
         Number of threads to use for registration. Default is 1.
     """
-    if reverse:
-        warp_call = (
-            f"greedy -threads {n_threads} -d 3 -rf {image_org_space} -ri LINEAR -rm {origin} "
-            f"{target} -r {affine},-1"
-        )
-    else:
-        warp_call = (
-            f"greedy -threads {n_threads} -d 3 -rf {image_org_space} -ri LINEAR -rm {origin} "
-            f"{target} -r {affine}"
-        )
+    inv = ",-1" if reverse else ""
+    _greedy(f"-threads {n_threads} -d 3 -rf {image_org_space} -ri LINEAR -rm {origin} "
+            f"{target} -r {affine}{inv}")
 
-    subprocess.run(shlex.split(warp_call), check=True)
 
 if __name__ == "__main__":
 
@@ -150,7 +137,6 @@ if __name__ == "__main__":
 
     # Temp directory
     temp_path = os.path.join(parent_directory, "temp")
-    # If temp directory does not exist, make it
     if not os.path.exists(temp_path):
         os.makedirs(temp_path)
 

@@ -7,16 +7,18 @@ def download_data(path):
     """
     Downloads required model weights, binaries and atlas files for usage.
     """
-    url = "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/lst_data.zip"
+    # v1.3.0 bundle: ONNX ensemble (UNet3D_MS_final_mdl{A,B,C}.onnx) + atlas.
+    # No compiled 'binaries' (greedy is the picsl-greedy pip package now). The .onnx
+    # are produced from the .h5 by scripts/tf_to_onnx.py and shipped in this release.
+    url = "https://github.com/CompImg/LST-AI/releases/download/v1.3.0/lst_data.zip"
 
     target_path = "lst_data.zip"
     extract_path = path  # This is the base directory.
 
     atlas_path = os.path.join(extract_path, 'atlas')
-    binary_path = os.path.join(extract_path, 'binaries')
     model_path = os.path.join(extract_path, 'model')
 
-    paths_to_check = [atlas_path, binary_path, model_path]
+    paths_to_check = [atlas_path, model_path]
 
     # Check if all paths exist.
     if not all(os.path.exists(path) for path in paths_to_check):

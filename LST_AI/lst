@@ -119,6 +119,14 @@ if __name__ == "__main__":
                         type=str,
                         default='0')
 
+    parser.add_argument('--backend',
+                        dest='backend',
+                        help='Segmentation inference backend: "onnx" (default; multi-arch, '
+                             'no TensorFlow) or "tf" (legacy TensorFlow/Keras)',
+                        type=str,
+                        choices=['onnx', 'tf'],
+                        default='onnx')
+
     parser.add_argument('--threads',
                         dest='threads',
                         help='Number of threads to be used for registration (default: all available)',
@@ -249,7 +257,7 @@ if __name__ == "__main__":
                 run_hdbet(input_image=path_org_t1w, output_image=path_org_stripped_t1w, device=args.device, mode="accurate")
 
             # move processed mask to correct naming convention
-            hdbet_mask = path_org_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
+            hdbet_mask = path_org_stripped_t1w.replace(".nii.gz", "_bet.nii.gz")
             shutil.move(hdbet_mask, path_orig_brainmask_flair)
 
             # apply brain mask to FLAIR
@@ -317,7 +325,7 @@ if __name__ == "__main__":
                 run_hdbet(input_image=path_mni_t1w, output_image=path_mni_stripped_t1w, device=args.device, mode="accurate")
 
             # move processed mask to correct naming convention
-            hdbet_mask = path_mni_stripped_t1w.replace(".nii.gz", "_mask.nii.gz")
+            hdbet_mask = path_mni_stripped_t1w.replace(".nii.gz", "_bet.nii.gz")
             shutil.move(hdbet_mask, path_mni_brainmask)
 
             # then apply brain mask to FLAIR
@@ -364,7 +372,8 @@ if __name__ == "__main__":
                           input_shape=(192,192,192),
                           threshold=args.threshold,
                           clipping=(min_clip, max_clip),
-                          lesion_thr=int(args.lesion_threshold))
+                          lesion_thr=int(args.lesion_threshold),
+                          backend=args.backend)
         
         # warp probability maps to FLAIR space if flag is set
         if args.probability_map:

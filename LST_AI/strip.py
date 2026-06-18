@@ -1,45 +1,52 @@
+import os
 import subprocess
 import shlex
 import nibabel as nib
 import numpy as np
 
+
 def run_hdbet(input_image, output_image, device, mode="accurate"):
     """
-    Runs the HD-BET tool to perform brain extraction on an input image.
+    Runs HD-BET (v2, PyPI) to perform brain extraction on an input image.
 
     Parameters:
     input_image (str): Path to the input image file.
-    output_image (str): Path for the output image file.
-    device (str): The device to use for computation, either a GPU device number or 'cpu'.
-    mode (str, optional): Operation mode of HD-BET. Can be 'accurate' or 'fast'. Default is 'accurate'.
+    output_image (str): Path for the brain-extracted output image. The binary brain
+        mask is written alongside as ``<output>_bet.nii.gz`` (HD-BET v2 convention).
+    device (str): GPU id (e.g. '0') or 'cpu'.
+    mode (str, optional): 'accurate' (test-time augmentation on) or 'fast' (TTA off).
+        Default 'accurate'. HD-BET v2 has a single model, so this maps to the
+        --disable_tta flag rather than the v1 -mode option.
 
-    Raises:
-    AssertionError: If an unknown mode is provided.
-
-    This function utilizes HD-BET, a tool for brain extraction from MRI images. Depending on the chosen mode
-    and device, it executes the appropriate command.
+    Notes
+    -----
+    HD-BET v2 selects the GPU via CUDA_VISIBLE_DEVICES + ``-device cuda`` (it no
+    longer takes a GPU index directly), so a numeric ``device`` is honoured by
+    exposing only that GPU to the subprocess. CPU always disables TTA (recommended).
     """
-    assert mode in ["accurate","fast"], 'Unknown HD-BET mode. Please choose either "accurate" or "fast"'
+    assert mode in ["accurate", "fast"], 'Unknown HD-BET mode. Choose "accurate" or "fast".'
 
+    env = dict(os.environ)
     if "cpu" in str(device).lower():
-        bet_call = f"hd-bet -i {input_image} -device cpu -mode {mode} -tta 0 -o {output_image}"
+        bet_call = f"hd-bet -i {input_image} -o {output_image} -device cpu --disable_tta --save_bet_mask"
     else:
-        bet_call = f"hd-bet -i {input_image} -device {device} -mode accurate -tta 1 -o {output_image}"
+        tta = "--disable_tta" if mode == "fast" else ""
+        bet_call = f"hd-bet -i {input_image} -o {output_image} -device cuda {tta} --save_bet_mask"
+        env["CUDA_VISIBLE_DEVICES"] = str(device)  # honour the requested GPU id
 
-    subprocess.run(shlex.split(bet_call), check=True)
+    subprocess.run(shlex.split(bet_call), check=True, env=env)
+
 
 def apply_mask(input_image, mask, output_image):
     """
-    Applies a mask to an input image and saves the result.
+    Applies a brain mask to an input image and saves the result.
 
     Parameters:
     input_image (str): Path to the input image file.
-    mask (str): Path to the mask image file.
-    output_image (str): Path for the output image file where the masked image will be saved.
+    mask (str): Path to the brain mask (HD-BET ``*_bet.nii.gz``).
+    output_image (str): Path for the masked (brain-extracted) output.
 
-    This function loads a brain mask and an input image, applies the mask to the input image,
-    and then saves the result. The mask and the input image are expected to be in a compatible format
-    and spatial alignment.
+    The mask and the input image are expected to be in compatible format / alignment.
     """
     brain_mask_arr = nib.load(mask).get_fdata()
     image_nib = nib.load(input_image)
