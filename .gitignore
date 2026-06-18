@@ -1,0 +1,16 @@
+# Python build / packaging artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Local environments
+.venv/
+venv/
+
+# Local model/atlas bundles fetched at runtime (shipped via the release zip)
+LST_AI/model/
+LST_AI/atlas/
+lst_data.zip
