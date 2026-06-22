@@ -14,19 +14,18 @@ setup(
     ],
     keywords=['lesion_segmentation', 'ms', 'lst', 'ai'],
     # Modernised, pip-only stack (no TensorFlow, no compiled greedy, no git HD-BET):
-    #   - inference: ONNX Runtime (segment.py --backend onnx); the .h5->.onnx
-    #     conversion lives in scripts/tf_to_onnx.py and needs TF separately.
+    #   - inference: PyTorch via onnx2torch (loads the ONNX UNet3D ensemble as an
+    #     nn.Module). The .h5->.onnx conversion lives in scripts/tf_to_onnx.py (TF
+    #     needed separately, conversion-time only). PyTorch replaced ONNX Runtime as
+    #     the backend: the ORT CUDA arena transiently grabbed ~40 GB at session init
+    #     and OOM'd when sharing a GPU; torch's allocator keeps it to a few GB.
     #   - registration: picsl-greedy (Python API, same greedy engine).
     #   - brain extraction: HD-BET v2 (PyPI), which sets the python>=3.10 floor.
     #
-    # The ONNX runtime is an EXTRA, not a base dependency, because 'onnxruntime'
-    # (CPU) and 'onnxruntime-gpu' (CUDA) install into the same import namespace and
-    # cannot coexist — so the backend is chosen explicitly at install time:
-    #   pip install "lst-ai[cpu]"   # portable CPU wheel (x86_64 / aarch64 / macOS)
-    #   pip install "lst-ai[gpu]"   # NVIDIA CUDA (onnxruntime-gpu)
-    # The 'gpu' extra is deliberately unversioned: the CUDA generation is a property
-    # of the deployment (the host/container's CUDA + cuDNN), not of LST-AI, so the
-    # deployment image pins onnxruntime-gpu to match its CUDA (see medmcp-neuro-ms).
+    # torch is pulled transitively (HD-BET, onnx2torch). CPU vs CUDA is a property of
+    # the deployment's torch wheel (the host/container's CUDA), not of LST-AI, so no
+    # per-backend extra is needed — the deployment selects the wheel (see medmcp-neuro-ms,
+    # which installs the cu128 torch build).
     python_requires='>=3.10',
     install_requires=[
         'numpy',
@@ -37,11 +36,9 @@ setup(
         'requests',
         'picsl-greedy',
         'hd-bet>=2.0.1',
+        'onnx',
+        'onnx2torch',
     ],
-    extras_require={
-        'cpu': ['onnxruntime'],
-        'gpu': ['onnxruntime-gpu'],
-    },
     scripts=['LST_AI/lst'],
     license='MIT',
     packages=find_packages(include=['LST_AI']),

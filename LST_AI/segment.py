@@ -48,39 +48,34 @@ def remove_small_objects(data, dim_lst, unit='mm3', thr=0):
 
 
 def _make_inference(model_path, device):
-    """Return a callable ``run(stem, x) -> out_seg ndarray`` backed by ONNX Runtime.
+    """Return a callable ``run(stem, x) -> out_seg ndarray`` backed by PyTorch.
 
-    Uses CUDAExecutionProvider when ``device`` is a GPU id, else CPUExecutionProvider.
-    onnxruntime is an install-time extra (``lst-ai[cpu]`` / ``lst-ai[gpu]``); a clear,
-    actionable error is raised if no runtime is installed. The ensemble UNets output
-    ``[out_seg, out_ds...]`` and we return out_seg (model output 0).
+    The ONNX UNet3D ensemble is loaded with ``onnx2torch`` and executed with PyTorch
+    (CUDA when ``device`` is a GPU id, else CPU). PyTorch's caching allocator keeps the
+    GPU footprint bounded (a few GB), whereas the ONNX Runtime CUDA arena transiently
+    grabbed ~40 GB at session init and OOM'd under GPU contention (e.g. sharing the card
+    with an LLM). torch is already required for HD-BET brain extraction, so this adds no
+    new heavy dependency. The ensemble UNets output ``[out_seg, out_ds...]``; we return
+    out_seg (model output 0). Validated against the canonical TensorFlow LST-AI: the
+    onnx2torch masks match it at least as closely as the ONNX Runtime path did.
     """
-    try:
-        import onnxruntime as ort
-    except ImportError as exc:
-        # onnxruntime is an install-time extra (see setup.py): 'onnxruntime' (CPU)
-        # and 'onnxruntime-gpu' (CUDA) share the same namespace and can't coexist,
-        # so a backend must be chosen explicitly.
-        raise ImportError(
-            "No ONNX runtime found. Install a backend:\n"
-            '    pip install "lst-ai[cpu]"   # portable CPU\n'
-            '    pip install "lst-ai[gpu]"   # NVIDIA CUDA (onnxruntime-gpu)\n'
-            "(or `pip install onnxruntime` / `onnxruntime-gpu` directly)."
-        ) from exc
+    import torch
+    import onnx
+    import onnx2torch
 
-    if str(device) == 'cpu':
-        providers = ['CPUExecutionProvider']
-    else:
-        providers = [('CUDAExecutionProvider', {'device_id': int(device)}),
-                     'CPUExecutionProvider']
-    sessions = {}
+    dev = 'cpu' if str(device) == 'cpu' else f'cuda:{int(device)}'
+    models = {}
 
     def run(stem, x):
-        if stem not in sessions:
-            sessions[stem] = ort.InferenceSession(
-                os.path.join(model_path, stem + '.onnx'), providers=providers)
-        sess = sessions[stem]
-        return sess.run(None, {sess.get_inputs()[0].name: x})[0]  # output 0 = out_seg
+        if stem not in models:
+            m = onnx2torch.convert(onnx.load(os.path.join(model_path, stem + '.onnx')))
+            models[stem] = m.to(dev).eval()
+        m = models[stem]
+        with torch.no_grad():
+            out = m(torch.from_numpy(np.ascontiguousarray(x)).to(dev))
+            if isinstance(out, (list, tuple)):
+                out = out[0]
+            return out.detach().cpu().numpy()  # output 0 = out_seg
 
     return run
 
