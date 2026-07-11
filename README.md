@@ -37,8 +37,16 @@ python3 \
 python3-pip
 ```
 
-Under the hood, LST also wraps [HD-BET](https://github.com/MIC-DKFZ/HD-BET) and [greedy](https://github.com/pyushkevich/greedy).
-We guide you through the download/compilation for greedy and installation for HD-BET in the following process. If you encounter specific issues with these packages, let us know in an issue and/or consult the GitHub repositories.
+> **What's new in v1.3.0 — a pip-only, multi-arch stack.** LST-AI no longer needs
+> TensorFlow, a downloaded/compiled `greedy` binary, or a git checkout of HD-BET.
+> Everything installs from PyPI in a single `pip install`:
+> - **inference:** ONNX Runtime — no TensorFlow
+> - **registration:** [`picsl-greedy`](https://pypi.org/project/picsl-greedy/) — the
+>   greedy engine as a wheel (nothing to download or compile)
+> - **brain extraction:** [HD-BET v2](https://github.com/MIC-DKFZ/HD-BET) from PyPI
+>
+> Pick the ONNX runtime that matches your hardware with the `[cpu]` or `[gpu]` extra
+> (they are mutually exclusive — see below).
 
 1. Make a new directory for LST-AI
 ```bash
@@ -56,69 +64,25 @@ python3 -m venv /path/to/new/lst/virtual/environment
 source /path/to/new/lst/virtual/environment/bin/activate
 ```
 
-4. Install LST-AI (and yes, with `pip -e` option!):
-```bash
-git clone https://github.com/CompImg/LST-AI/
-cd LST-AI
-pip install -e .
-cd ..
-```
+4. Install LST-AI from this fork, choosing the ONNX runtime backend for your hardware.
+   This single command also pulls `picsl-greedy` and HD-BET v2 — there is **no** separate
+   HD-BET checkout and **no** greedy download/compile any more.
 
-4. Install [HD-BET](https://github.com/MIC-DKFZ/HD-BET)
-```bash
-git clone https://github.com/MIC-DKFZ/HD-BET
-cd HD-BET
-git checkout ae160681324d524db3578e4135bf781f8206e146
-pip install -e .
-cd ..
-```
+   ```bash
+   # CPU — portable (x86_64 / aarch64 / macOS)
+   pip install "lst-ai[cpu] @ git+https://github.com/jqmcginnis/LST-AI@v1.3.0"
 
-5. Download or Compile and install greedy for your platform
-  * 6.1 (Variant A): Download the pre-built greedy tool and place it into structure
-    1) Download the tool
-    ```bash
-    wget "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/greedy"
-    ```
-    2) and ensure it is a findable path:
-    ```bash
-    chmod +x greedy
-    mkdir ~/bin
-    mv greedy ~/bin
-    export PATH="$HOME/bin:$PATH"
-    ```
-    Naturally, you can place the binary in ANY directory if you add it to your `.bashrc` and export the location to the `$PATH`.
-  * 6.2 (Variant B): Compile, make, and install the greedy tool (you will need to install both, VTK and ITK)
-    ```
-    apt-get update && apt-get install -y \
-    build-essential \
-    libpng-dev \
-    libtiff-dev \
-    uuid-dev \
-    make \
-    cmake \
-    g++ \
-    libgl1-mesa-dev
+   # NVIDIA GPU — CUDA (installs onnxruntime-gpu)
+   pip install "lst-ai[gpu] @ git+https://github.com/jqmcginnis/LST-AI@v1.3.0"
+   ```
 
-    wget https://github.com/InsightSoftwareConsortium/ITK/archive/refs/tags/v5.2.1.tar.gz
-    tar -zxvf v5.2.1.tar.gz
-    cd ITK-5.2.1
-    mkdir build
-    cd build
-    cmake ..
-    make -j$(nproc)
-    make install
+   The `[cpu]` and `[gpu]` extras are **mutually exclusive** (`onnxruntime` and
+   `onnxruntime-gpu` share one import namespace and cannot coexist) — install exactly
+   one. The `[gpu]` extra is intentionally unversioned: the CUDA generation is a property
+   of your machine/container, so on a GPU host make sure the resolved `onnxruntime-gpu`
+   wheel matches your installed CUDA (e.g. on CUDA 12 pin it to the CUDA-12 line).
 
-    wget https://www.vtk.org/files/release/9.1/VTK-9.1.0.tar.gz
-    tar -xf VTK-9.1.0.tar.gz
-    cmake ..
-    make -j$(nproc)
-    make install
-
-    git clone https://github.com/pyushkevich/greedy greedy
-    cmake ../greedy
-    make -j$(nproc)
-    make install
-    ```
+   The model weights and MNI atlas are downloaded automatically on first run.
 
 ### Usage of LST-AI
 

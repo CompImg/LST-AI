@@ -15,14 +15,14 @@ MSMask labels:
     5  ==  Infratentorial
 
 """
-import shlex
-import subprocess
 import os
 
 import nibabel as nib
 import numpy as np
 from skimage.measure import label
 from skimage.morphology import binary_dilation
+
+from LST_AI.register import _greedy
 
 
 def annotate_lesions(atlas_t1, atlas_mask, t1w_native, seg_native, out_atlas_warp,
@@ -61,24 +61,24 @@ def annotate_lesions(atlas_t1, atlas_mask, t1w_native, seg_native, out_atlas_war
 
     """
 
-    # Register Atlas -> Patient_T1 using greedy (two-step: rigid first, then deformable)
-    deformable_call = (
-        f"greedy -d 3 -m WNCC 2x2x2 -sv -n 100x50x10"
+    # Register Atlas -> Patient_T1 using greedy (deformable, stationary velocity).
+    # Uses the picsl_greedy Python API (same engine, no external 'greedy' binary) —
+    # see LST_AI.register._greedy. The warp field is persisted to out_atlas_warp and
+    # re-read by the reslice call below, so separate Greedy3D instances are fine.
+    _greedy(
+        f"-d 3 -m WNCC 2x2x2 -sv -n 100x50x10"
         f" -i {t1w_native} {atlas_t1}"
         f" -o {out_atlas_warp}"
         f" -threads {n_threads}"
     )
-    subprocess.run(shlex.split(deformable_call), check=True)
 
-    # Warp MSmask in patient space
-    warp_call = (
-        f"greedy -d 3 -rf {t1w_native} -ri LABEL 0.2vox"
+    # Warp MSmask into patient space
+    _greedy(
+        f"-d 3 -rf {t1w_native} -ri LABEL 0.2vox"
         f" -rm {atlas_mask} {out_atlas_mask_warped}"
         f" -r {out_atlas_warp}"
         f" -threads {n_threads}"
     )
-
-    subprocess.run(shlex.split(warp_call), check=True)
 
     # Load segmentation and msmask and location-label lesions
     seg_nib = nib.load(seg_native)
