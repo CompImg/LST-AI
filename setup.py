@@ -38,6 +38,7 @@ setup(
         'hd-bet>=2.0.1',
         'onnx',
         'onnx2torch',
+        'h5py'
     ],
     scripts=['LST_AI/lst'],
     license='MIT',

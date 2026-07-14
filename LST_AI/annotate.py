@@ -16,102 +16,221 @@ MSMask labels:
 
 """
 import os
+import subprocess
+import shutil
+import shlex
 
 import nibabel as nib
 import numpy as np
 from skimage.measure import label
-from skimage.morphology import binary_dilation
+from skimage.morphology import dilation
 
-from LST_AI.register import _greedy
+# FastSurfer/FreeSurfer aseg structure_label -> class_label mapping
+# class_label key: 2=juxtacortical, 3=subcortical, 4=periventricular, 5=infratentorial
+FASTSURFER_LABEL_MAPPING = {
+    2: 3,   # Left-Cerebral-White-Matter
+    3: 2,   # Left-Cortex
+    4: 4,   # Left-Lateral-Ventricle
+    7: 5,   # Left-Cerebellum-White-Matter
+    8: 5,   # Left-Cerebellum-Cortex
+    10: 3,  # Left-Thalamus
+    11: 3,  # Left-Caudate
+    12: 3,  # Left-Putamen
+    13: 3,  # Left-Pallidum
+    14: 4,  # 3rd-Ventricle
+    15: 5,  # 4th-Ventricle
+    16: 5,  # Brain-Stem
+    17: 3,  # Left-Hippocampus
+    18: 3,  # Left-Amygdala
+    24: 4,  # CSF
+    26: 3,  # Left-Accumbens-area
+    28: 3,  # Left-VentralDC
+    31: 4,  # Left-choroid-plexus
+    41: 3,  # Right-Cerebral-White-Matter
+    42: 2,  # Right-Cortex
+    43: 4,  # Right-Lateral-Ventricle
+    46: 5,  # Right-Cerebellum-White-Matter
+    47: 5,  # Right-Cerebellum-Cortex
+    49: 3,  # Right-Thalamus
+    50: 3,  # Right-Caudate
+    51: 3,  # Right-Putamen
+    52: 3,  # Right-Pallidum
+    53: 3,  # Right-Hippocampus
+    54: 3,  # Right-Amygdala
+    58: 3,  # Right-Accumbens-area
+    60: 3,  # Right-VentralDC
+    63: 4,  # Right-choroid-plexus
+    77: 3,  # WM-hypointensities
+}
 
+def get_fastsurfer(im_path, seg_path, device):
+    """
+    This function runs the FastSurfer cross sectional pipeline for the provided image. 
 
-def annotate_lesions(atlas_t1, atlas_mask, t1w_native, seg_native, out_atlas_warp,
-                     out_atlas_mask_warped, out_annotated_native, n_threads=8):
+    Parameters:
+    -----------
+    im_path : str
+         Path of the T1w image for which FastSurfer segmentation should be calculated.
+    seg_path : str
+         Path where the FastSurfer segmentation should be saved.
+    
+    Returns:
+    --------
+    None 
+        This function produces a FastSurfer segmentation. 
+    """
+          
+    # define paths for FastSurfer
+    sd_path = os.path.dirname(os.path.dirname(im_path))
+    sid = os.path.basename(os.path.dirname(im_path))
+    
+    # call FastSurfer cross sectional segmentation
+    print(f'Running FastSurfer ...')
+    cmd = f'''
+            timeout 15000 run_fastsurfer.sh 
+            --t1 {im_path} 
+            --sd {sd_path} 
+            --sid {sid} 
+            --device {device}
+            --seg_only 
+            --threads 4 
+            --no_cereb 
+            --no_hypothal 
+            --no_cc
+            --no_biasfield
+            --keepgeom
+            '''
+    
+    env = dict(os.environ)
+    if "cuda" in str(device).lower():
+        env["CUDA_VISIBLE_DEVICES"] = str(device).split(':')[-1]  # honour the requested GPU id
+    subprocess.run(shlex.split(cmd), check=True, env=env)
+
+    # check if folder contains aseg.auto_noCCseg.mgz file, indicating that FastSurfer successfully finished
+    # and convert to nifti
+    seg_mgz_path = os.path.join(sd_path, sid, 'mri', 'aseg.auto_noCCseg.mgz')
+    if os.path.exists(seg_mgz_path):
+        seg_mgz = nib.load(seg_mgz_path)
+        nib.save(seg_mgz, seg_path)
+    else:
+        raise ValueError(f'{seg_mgz_path}: FastSurfer segmentation failed!')
+    
+    # Housekeeping: remove the remaining FastSurfer output folder
+    fastsurfer_output_folder_mri = os.path.join(sd_path, sid, 'mri')
+    fastsurfer_output_folder_scripts = os.path.join(sd_path, sid, 'scripts')
+    if os.path.exists(fastsurfer_output_folder_mri):
+        shutil.rmtree(fastsurfer_output_folder_mri)
+    if os.path.exists(fastsurfer_output_folder_scripts):
+        shutil.rmtree(fastsurfer_output_folder_scripts)
+
+def convert_labels(segmentation, label_mapping=FASTSURFER_LABEL_MAPPING):
+    """
+    This function converts the labels of a brain segmentation mask according to a label mapping. 
+    The function takes as input the segmentation and a dictionary with the label mapping. 
+
+    Parameters:
+    -----------
+    seg_mask : 3D array
+        3D array containing the segmentation mask with original labels.
+    label_mapping : dict
+        Dictionary containing the mapping from original labels to new labels.
+    
+    Returns:
+    --------
+    out_mask :  
+        This function produces a 3D array containing the segmentation mask with converted labels according to the provided mapping.
+    """
+    # Build a lookup table (LUT) for fast vectorized remapping
+    max_label = max(label_mapping.keys())
+    lut = np.zeros(max_label + 1, dtype=np.int32)
+    for struct_label, class_label in label_mapping.items():
+        lut[struct_label] = class_label
+
+    # Apply LUT mapping to segmentation
+    segmentation = segmentation.astype(np.int32)  # Ensure the segmentation mask is of integer type for indexing
+    out_mask = lut[segmentation] 
+
+    return out_mask
+
+def annotate_lesions(t1w_im, lesion_mask, t1w_seg, lesion_mask_annotated, device, label_mapping=FASTSURFER_LABEL_MAPPING):
     """
     Annotate lesions in a given image using an atlas.
 
     Parameters:
     -----------
-    atlas_t1: str
-        Path to the atlas T1-weighted image (in MNI space).
-    atlas_mask: str
-        Path to the atlas mask image.
-    t1w_native: str
-        Path to the T1-weighted image in native space.
-    seg_native: str
-        Path to the segmentation image in native space.
-    out_atlas_warp: str
-        Path where the warp from the atlas to the patient T1 should be saved.
-    out_atlas_mask_warped: str
-        Path where the warped atlas mask should be saved.
-    out_annotated_native: str
-        Path where the annotated lesion segmentation in native space should be saved.
+    t1w_im : str
+        Path to the patient's T1-weighted image.
+    lesion_mask : str
+        Path to the lesion mask in the same space.
+    t1w_seg : str
+        Path to the FastSurfer segmentation.
+    lesion_mask_annotated : str
+        Path where the annotated lesion mask will be saved.
+    device : str
+        Device to run FastSurfer on (e.g., 'cpu' or '0').
+    label_mapping : str
+        Path to the label mapping file that defines the correspondence between atlas labels and lesion types.
 
     Description:
     ------------
     The function performs several tasks:
-    1. Registers the atlas to the patient's T1 image using a two-step greedy algorithm.
-    2. Warps the atlas mask to the patient's space.
-    3. Annotates lesions based on the overlap with the atlas mask.
-    4. Saves the annotated segmentation in native space.
+    1. Applies segmentation of T1w image using FastSurfer
+    2. Converts the segmentation to a subject-specific MS region segmentation.
+    3. Annotates lesions based on the overlap with the MS region segmentation.
+    4. Saves the annotated lesion segmentation.
 
     Returns:
     --------
     None
 
     """
+    if device == '0':
+        device = f'cuda:{device}'
 
-    # Register Atlas -> Patient_T1 using greedy (deformable, stationary velocity).
-    # Uses the picsl_greedy Python API (same engine, no external 'greedy' binary) —
-    # see LST_AI.register._greedy. The warp field is persisted to out_atlas_warp and
-    # re-read by the reslice call below, so separate Greedy3D instances are fine.
-    _greedy(
-        f"-d 3 -m WNCC 2x2x2 -sv -n 100x50x10"
-        f" -i {t1w_native} {atlas_t1}"
-        f" -o {out_atlas_warp}"
-        f" -threads {n_threads}"
-    )
+    # Call FastSurfer to segment the T1w image
+    get_fastsurfer(t1w_im, t1w_seg, device)
 
-    # Warp MSmask into patient space
-    _greedy(
-        f"-d 3 -rf {t1w_native} -ri LABEL 0.2vox"
-        f" -rm {atlas_mask} {out_atlas_mask_warped}"
-        f" -r {out_atlas_warp}"
-        f" -threads {n_threads}"
-    )
+    # Convert FastSurfer segmentation to subject-specific MS region segmentation
+    seg_nib = nib.load(t1w_seg)
+    seg_data = seg_nib.get_fdata()
+    msmask = convert_labels(seg_data, label_mapping)
 
-    # Load segmentation and msmask and location-label lesions
-    seg_nib = nib.load(seg_native)
-    seg = seg_nib.get_fdata()
-    seg[seg > 0] = 1  # Make sure seg is binary
-    msmask = nib.load(out_atlas_mask_warped).get_fdata()
+    # save the converted segmentation as a temporary NIfTI file
+    msmask_nib = nib.Nifti1Image(msmask.astype(np.uint8), seg_nib.affine, seg_nib.header)
+    temp_seg_path = str(t1w_seg).replace('.nii.gz', '_MS-mask.nii.gz')
+    nib.save(msmask_nib, temp_seg_path)
 
-    seg_label = label(seg, connectivity=3)
-    for lesion_ctr in range(1, seg_label.max() + 1):
+    # Load lesion segmentation
+    les_seg_nib = nib.load(lesion_mask)
+    les_seg = les_seg_nib.get_fdata()
+    les_seg[les_seg > 0] = 1  # Make sure seg is binary
+
+    les_seg_label = label(les_seg, connectivity=3)
+    for lesion_ctr in range(1, les_seg_label.max() + 1):
         # We create a temporary binary mask
         # for each lesion & dilate it by 1
         # (to "catch" adjacent structures)
-        temp_mask = np.zeros(seg.shape)
-        temp_mask[seg_label == lesion_ctr] = 1
-        temp_mask_dil = binary_dilation(
+        temp_mask = np.zeros(les_seg.shape)
+        temp_mask[les_seg_label == lesion_ctr] = 1
+        temp_mask_dil = dilation(
             temp_mask, footprint=np.ones((3, 3, 3))).astype(np.uint8)
 
         if 4 in msmask[temp_mask_dil == 1]:
-            seg[temp_mask == 1] = 1  # PV
+            les_seg[temp_mask == 1] = 1  # PV
 
         elif 2 in msmask[temp_mask_dil == 1]:
-            seg[temp_mask == 1] = 2  # JC
+            les_seg[temp_mask == 1] = 2  # JC
 
         elif 5 in msmask[temp_mask_dil == 1]:
-            seg[temp_mask == 1] = 4  # IT
+            les_seg[temp_mask == 1] = 4  # IT
 
         else:
-            seg[temp_mask == 1] = 3  # SC
+            les_seg[temp_mask == 1] = 3  # SC
 
     # Saving & warping back to T1w space
-    nib.save(nib.Nifti1Image(seg.astype(np.uint8),
-                             seg_nib.affine, seg_nib.header),
-                             out_annotated_native)
+    nib.save(nib.Nifti1Image(les_seg.astype(np.uint8),
+                             les_seg_nib.affine, les_seg_nib.header),
+                             lesion_mask_annotated)
 
 
 if __name__ == "__main__":
@@ -119,11 +238,6 @@ if __name__ == "__main__":
     # Only for testing purposes
     lst_dir = os.getcwd()
     parent_directory = os.path.dirname(lst_dir)
-    atlas_t1w_path = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_t1.nii.gz")
-    atlas_mask_path = os.path.join(parent_directory, "atlas", "sub-mni152_space-mni_msmask.nii.gz")
-    out_atlas_warp_path = os.path.join(parent_directory, "warp_field.nii.gz")
-    out_atlas_mask_warped_path = os.path.join(parent_directory,
-                                              "tmp_mask.nii.gz")
 
     # annotate lesion test data
     t1w_native_path = os.path.join(parent_directory, "testing", "annotation",
@@ -132,21 +246,16 @@ if __name__ == "__main__":
                               "sub-msseg-test-center01-02_ses-01_space-mni_seg-manual.nii.gz")
     annotated_seg_path = os.path.join(parent_directory, "annotated_segmentation.nii.gz")
 
-    annotate_lesions(atlas_t1=atlas_t1w_path,
-                     atlas_mask=atlas_mask_path,
-                     t1w_native=t1w_native_path,
-                     seg_native=seg_native_path,
-                     out_atlas_warp=out_atlas_warp_path,
-                     out_atlas_mask_warped=out_atlas_mask_warped_path,
-                     out_annotated_native=annotated_seg_path,
-                     n_threads=6)
+    annotate_lesions(t1w_im=t1w_native_path,
+                     lesion_mask=seg_native_path,
+                     t1w_seg=t1w_native_path,
+                     lesion_mask_annotated=annotated_seg_path,
+                     label_mapping=FASTSURFER_LABEL_MAPPING)
 
     # check and remove testing results
     gt = os.path.join(parent_directory, "testing", "annotation",
                       "sub-msseg-test-center01-02_ses-01_space-mni_annotated_seg.nii.gz")
     array_gt = nib.load(gt).get_fdata()
     array_pred = nib.load(annotated_seg_path).get_fdata()
-    os.remove(out_atlas_mask_warped_path)
-    os.remove(out_atlas_warp_path)
     os.remove(annotated_seg_path)
     np.testing.assert_array_equal(array_gt, array_pred)
