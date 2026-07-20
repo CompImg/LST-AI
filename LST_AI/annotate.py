@@ -187,6 +187,11 @@ def annotate_lesions(t1w_im, lesion_mask, t1w_seg, lesion_mask_annotated, device
     if device == '0':
         device = f'cuda:{device}'
 
+    # Load lesion segmentation
+    les_seg_nib = nib.load(lesion_mask)
+    les_seg = les_seg_nib.get_fdata()
+    les_seg[les_seg > 0] = 1  # Make sure seg is binary
+
     # Call FastSurfer to segment the T1w image
     get_fastsurfer(t1w_im, t1w_seg, device)
 
@@ -194,16 +199,13 @@ def annotate_lesions(t1w_im, lesion_mask, t1w_seg, lesion_mask_annotated, device
     seg_nib = nib.load(t1w_seg)
     seg_data = seg_nib.get_fdata()
     msmask = convert_labels(seg_data, label_mapping)
+    # set all lesion voxels to 3 (WM) in the MSMask to avoid misclassification
+    msmask[les_seg == 1] = 3
 
     # save the converted segmentation as a temporary NIfTI file
     msmask_nib = nib.Nifti1Image(msmask.astype(np.uint8), seg_nib.affine, seg_nib.header)
     temp_seg_path = str(t1w_seg).replace('.nii.gz', '_MS-mask.nii.gz')
     nib.save(msmask_nib, temp_seg_path)
-
-    # Load lesion segmentation
-    les_seg_nib = nib.load(lesion_mask)
-    les_seg = les_seg_nib.get_fdata()
-    les_seg[les_seg > 0] = 1  # Make sure seg is binary
 
     les_seg_label = label(les_seg, connectivity=3)
     for lesion_ctr in range(1, les_seg_label.max() + 1):
@@ -218,11 +220,11 @@ def annotate_lesions(t1w_im, lesion_mask, t1w_seg, lesion_mask_annotated, device
         if 4 in msmask[temp_mask_dil == 1]:
             les_seg[temp_mask == 1] = 1  # PV
 
-        elif 2 in msmask[temp_mask_dil == 1]:
-            les_seg[temp_mask == 1] = 2  # JC
-
         elif 5 in msmask[temp_mask_dil == 1]:
             les_seg[temp_mask == 1] = 4  # IT
+
+        elif 2 in msmask[temp_mask_dil == 1]:
+            les_seg[temp_mask == 1] = 2  # JC
 
         else:
             les_seg[temp_mask == 1] = 3  # SC
