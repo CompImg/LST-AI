@@ -200,7 +200,28 @@ def annotate_lesions(t1w_im, lesion_mask, t1w_seg, lesion_mask_annotated, device
     seg_data = seg_nib.get_fdata()
     msmask = convert_labels(seg_data, label_mapping)
     # set all lesion voxels to 3 (WM) in the MSMask to avoid misclassification
-    msmask[les_seg == 1] = 3
+    # but not for IT lesions, which are in the infratentorial region
+    # First, define a temporary lesion mask in which the voxels that are in the infratentorial region are set to 5 (IT)
+    les_seg_temp = np.copy(les_seg)
+
+    # check which lesions overlap with the infratentorial region (label 5 in MSMask) and set them to 5 in the temporary lesion mask
+    # use connected components to identify individual lesions
+    les_temp_label = label(les_seg_temp, connectivity=3)
+    for lesion_ctr in range(1, les_temp_label.max() + 1):
+        # We create a temporary binary mask
+        # for each lesion & dilate it by 1
+        # (to "catch" adjacent structures)
+        temp_mask = np.zeros(les_seg.shape)
+        temp_mask[les_temp_label == lesion_ctr] = 1
+        temp_mask_dil = dilation(
+            temp_mask, footprint=np.ones((3, 3, 3))).astype(np.uint8)
+
+        if 5 in msmask[temp_mask_dil == 1]:
+            les_seg_temp[les_temp_label == lesion_ctr] = 5
+
+    # Next, all lesion voxels that are not in the IT region still have label 1, 
+    # and we can set them to 3 (WM) in the MSMask
+    msmask[les_seg_temp == 1] = 3
 
     # save the converted segmentation as a temporary NIfTI file
     msmask_nib = nib.Nifti1Image(msmask.astype(np.uint8), seg_nib.affine, seg_nib.header)
