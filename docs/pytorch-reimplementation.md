@@ -126,3 +126,28 @@ thread count changes results by ~2e-6 while flipping zero voxels.
 python tools/validate_pipeline.py --subjects <open_ms_data>/cross_sectional/coregistered \
     --out results/ --limit 10
 ```
+
+## Reproducibility of the whole pipeline
+
+The segmentation network is deterministic: bit-identical run to run at a fixed thread
+count, with thread count changing probabilities by ~2e-6 and flipping zero voxels.
+
+**The pipeline around it is not**, and was not before this change. Running the identical
+code and weights on the same subject, once in a virtualenv and once in the Docker image
+built from it:
+
+| stage | agreement |
+|---|---|
+| HD-BET brain mask | Dice 0.993436 |
+| MNI FLAIR after greedy | max abs diff 1.93e+02 |
+| final lesion mask | Dice 0.883 |
+
+Small float differences in HD-BET's CPU inference (thread counts, BLAS kernels) move the
+brain mask by <1 %, which changes the stripped image, which changes the registration, and
+the effect compounds. For scale: the whole TensorFlow-to-PyTorch swap perturbs the
+segmentation *less* (Dice 0.996) than re-running the same code in a container does
+(Dice 0.883).
+
+The practical consequence is the usual one and predates this work: process a study in one
+environment, and reprocess baselines rather than mixing. Pinning the container image is
+the strongest guarantee available.

@@ -85,8 +85,8 @@ jobs:
           file: docker/Dockerfile
           platforms: ${{ matrix.platform }}
           push: false
-          # arm64 has no picsl-greedy wheel on PyPI. Set the repository variable
-          # GREEDY_WHEEL_ARM64 to a prebuilt wheel URL; without it the arm64 build
-          # fails at pip install, which is the honest signal that it is still blocked.
+          # The Dockerfile defaults arm64 to an unofficial prebuilt greedy wheel, since
+          # none is published upstream. Set the repository variable GREEDY_WHEEL_ARM64
+          # to override it (e.g. once official wheels exist).
           build-args: |
-            GREEDY_WHEEL=${{ matrix.platform == 'linux/arm64' && vars.GREEDY_WHEEL_ARM64 || '' }}
+            ${{ vars.GREEDY_WHEEL_ARM64 && format('GREEDY_WHEEL={0}', vars.GREEDY_WHEEL_ARM64) || '' }}

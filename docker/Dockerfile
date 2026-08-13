@@ -7,10 +7,9 @@
 #   docker buildx build --platform linux/amd64,linux/arm64 -t lst-ai:torch -f docker/Dockerfile .
 #
 # On linux/arm64 there is no picsl-greedy wheel on PyPI (Kitware publishes the VTK
-# wheel-SDK for x86_64 only, so greedy has to compile VTK from source). Until the
-# aarch64 wheels land upstream, pass one built out-of-band:
-#
-#   --build-arg GREEDY_WHEEL=https://github.com/jqmcginnis/greedy_python/releases/download/<tag>/picsl_greedy-<...>-linux_aarch64.whl
+# wheel-SDK for x86_64 only, so greedy has to compile VTK from source). An unofficial
+# aarch64 wheel is used automatically; override with --build-arg GREEDY_WHEEL=<url>.
+# The base image is pinned to Python 3.11 because that wheel is cp311.
 #
 # For GPU, swap the base image for nvidia/cuda:12.3.1-runtime-ubuntu22.04 and install a
 # CUDA torch build instead of the CPU index below.
@@ -30,10 +29,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # wheels. Installed first so it is cached independently of the source below.
 RUN pip install --index-url https://download.pytorch.org/whl/cpu torch
 
-# greedy: PyPI on amd64; a supplied wheel on arm64 until upstream publishes one.
-ARG GREEDY_WHEEL=""
-RUN if [ -n "$GREEDY_WHEEL" ]; then \
-        echo "installing greedy from $GREEDY_WHEEL" && pip install "$GREEDY_WHEEL"; \
+# greedy: PyPI on amd64, an unofficial prebuilt wheel on arm64 (none is published
+# upstream yet). Empty GREEDY_WHEEL forces PyPI on any architecture.
+ARG GREEDY_WHEEL="https://github.com/jqmcginnis/greedy_python/releases/download/v1.4.0-aarch64.1/picsl_greedy-1.4.0-cp311-cp311-linux_aarch64.whl"
+RUN set -eu; \
+    if [ "$(uname -m)" = "aarch64" ] && [ -n "$GREEDY_WHEEL" ]; then \
+        echo "arm64: installing greedy from $GREEDY_WHEEL"; pip install "$GREEDY_WHEEL"; \
     else \
         pip install picsl-greedy; \
     fi
