@@ -49,13 +49,40 @@ pip install https://github.com/jqmcginnis/greedy_python/releases/download/<tag>/
 
 ### What happened to TensorFlow?
 
-The segmentation network was reimplemented natively in PyTorch. The **released weights are
-unchanged** — every kernel matches the released `.h5` bit-for-bit. Results shift slightly
-because no framework swap is bit-identical, but PyTorch stays far closer to the original
-TensorFlow output than the intermediate ONNX Runtime backend did. See
-[docs/pytorch-reimplementation.md](docs/pytorch-reimplementation.md) for the measurements
-and for guidance if you are comparing against earlier results.
+Inference was reimplemented natively in PyTorch. The **released weights are unchanged** —
+every convolution kernel, gamma and beta matches the released `.h5` bit-for-bit
+(max abs diff 0.0, all three ensemble members). Nothing was retrained.
 
+Validated against the real released TensorFlow models on 10 subjects, full ensemble:
+
+| | |
+|---|---|
+| Dice agreement with TensorFlow | **0.99565** |
+| lesion volume difference | **−0.12 %** (worst −2.16 %) |
+| lesion Dice vs consensus GT | TF 0.6829 · PyTorch 0.6835 |
+
+No framework swap is bit-identical, but this is far closer than the intermediate ONNX
+Runtime backend it replaces (Dice 0.9367, **+14.3 %** lesion volume). For scale, the
+pipeline has never been bit-reproducible anyway: running the identical code in a container
+rather than a virtualenv moves the result more (Dice 0.883) than this change does, because
+greedy's registration is nondeterministic run to run.
+
+See [docs/pytorch-reimplementation.md](docs/pytorch-reimplementation.md) for the
+measurements, the cause of the ONNX drift, and guidance if you are comparing against
+earlier results.
+
+### Lesion annotation with FastSurfer
+
+Lesions are assigned to anatomical regions using a FastSurfer segmentation of the T1
+(`--seg_only`, so no FreeSurfer and no surface pipeline). FastSurfer is a large optional
+extra: install it separately, or build the Docker image with
+`--build-arg WITH_FASTSURFER=1`. Segmentation alone (`--segment_only`) does not need it.
+
+### Training your own models
+
+`training/` trains the same network this package runs at inference — single-channel
+(FLAIR) or dual-channel (FLAIR + T1). It imports `LST_AI.model` rather than copying it, so
+what you train is what ships. See [training/README.md](training/README.md).
 
 ### Usage of LST-AI
 

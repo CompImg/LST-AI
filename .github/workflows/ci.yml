@@ -38,6 +38,10 @@ jobs:
         run: python -c "from LST_AI.model import NNUNet3D, SHIPPED_VARIANTS; print(sorted(SHIPPED_VARIANTS))"
       - name: Architecture tests
         run: pytest tests -q -m "not needs_weights"
+      - name: Training-side tests (dataset, losses, trainer)
+        run: |
+          pip install nibabel
+          pytest training/tests -q
 
   weights-parity:
     runs-on: ubuntu-latest
