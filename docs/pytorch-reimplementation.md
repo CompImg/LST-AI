@@ -151,3 +151,20 @@ segmentation *less* (Dice 0.996) than re-running the same code in a container do
 The practical consequence is the usual one and predates this work: process a study in one
 environment, and reprocess baselines rather than mixing. Pinning the container image is
 the strongest guarantee available.
+
+### greedy registration is itself nondeterministic
+
+Worth recording, because it bounds what any reproducibility claim can mean. Running the
+same affine registration repeatedly, on identical inputs:
+
+| | run-to-run max abs diff in the transform |
+|---|---|
+| greedy CLI binary, 4 threads | 1.61e-01 |
+| picsl_greedy Python API, 4 threads | 9.07e-02 |
+| greedy CLI binary, **1 thread** | 2.49e-01 |
+| CLI vs Python API | 3.02e-01 |
+
+It is nondeterministic even single-threaded, so this is internal sampling rather than a
+thread race. The CLI-versus-API gap is the same order as CLI-versus-CLI, which means
+moving from the external binary to `picsl_greedy` introduced nothing new — and that this,
+rather than the network, dominates end-to-end variation between runs.
