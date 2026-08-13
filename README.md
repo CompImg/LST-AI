@@ -26,99 +26,36 @@ To allow the usage of LST-AI on different platforms and online/offline usage, we
 
 ### Installing the Python package
 
-LST-AI is a Python-based package. For Debian-based systems, you can install all required packages via `apt`:
+LST-AI installs from pip. Inference runs in **PyTorch** — there is no TensorFlow and no
+ONNX Runtime dependency. `greedy` (registration) and HD-BET (skull stripping) install as
+wheels too, so nothing is compiled.
 
-```
-apt-get update && apt-get install -y \
-git \
-wget \
-unzip \
-python3 \
-python3-pip
-```
-
-Under the hood, LST also wraps [HD-BET](https://github.com/MIC-DKFZ/HD-BET) and [greedy](https://github.com/pyushkevich/greedy).
-We guide you through the download/compilation for greedy and installation for HD-BET in the following process. If you encounter specific issues with these packages, let us know in an issue and/or consult the GitHub repositories.
-
-1. Make a new directory for LST-AI
 ```bash
-mkdir lst_directory
-cd lst_directory
-```
-
-2. We recommend setting up a virtual environment for LST-AI:
-```bash
-python3 -m venv /path/to/new/lst/virtual/environment
-```
-
-3. Activate your new environment, e.g. `(lst_env)`
-```bash
-source /path/to/new/lst/virtual/environment/bin/activate
-```
-
-4. Install LST-AI (and yes, with `pip -e` option!):
-```bash
-git clone https://github.com/CompImg/LST-AI/
-cd LST-AI
+python3 -m venv lst_env && source lst_env/bin/activate
+git clone https://github.com/CompImg/LST-AI/ && cd LST-AI
 pip install -e .
-cd ..
 ```
 
-4. Install [HD-BET](https://github.com/MIC-DKFZ/HD-BET)
+That pulls in `torch`, `picsl-greedy` and `hd-bet`. The model bundle and atlas are
+downloaded automatically on first run.
+
+**On linux/arm64**, `picsl-greedy` has no wheel on PyPI (Kitware publishes the VTK
+wheel-SDK for x86_64 only, so greedy has to build VTK from source). Until aarch64 wheels
+are published upstream, install one built out-of-band before `pip install -e .`:
+
 ```bash
-git clone https://github.com/MIC-DKFZ/HD-BET
-cd HD-BET
-git checkout ae160681324d524db3578e4135bf781f8206e146
-pip install -e .
-cd ..
+pip install https://github.com/jqmcginnis/greedy_python/releases/download/<tag>/picsl_greedy-<...>-linux_aarch64.whl
 ```
 
-5. Download or Compile and install greedy for your platform
-  * 6.1 (Variant A): Download the pre-built greedy tool and place it into structure
-    1) Download the tool
-    ```bash
-    wget "https://github.com/CompImg/LST-AI/releases/download/v1.0.0/greedy"
-    ```
-    2) and ensure it is a findable path:
-    ```bash
-    chmod +x greedy
-    mkdir ~/bin
-    mv greedy ~/bin
-    export PATH="$HOME/bin:$PATH"
-    ```
-    Naturally, you can place the binary in ANY directory if you add it to your `.bashrc` and export the location to the `$PATH`.
-  * 6.2 (Variant B): Compile, make, and install the greedy tool (you will need to install both, VTK and ITK)
-    ```
-    apt-get update && apt-get install -y \
-    build-essential \
-    libpng-dev \
-    libtiff-dev \
-    uuid-dev \
-    make \
-    cmake \
-    g++ \
-    libgl1-mesa-dev
+### What happened to TensorFlow?
 
-    wget https://github.com/InsightSoftwareConsortium/ITK/archive/refs/tags/v5.2.1.tar.gz
-    tar -zxvf v5.2.1.tar.gz
-    cd ITK-5.2.1
-    mkdir build
-    cd build
-    cmake ..
-    make -j$(nproc)
-    make install
+The segmentation network was reimplemented natively in PyTorch. The **released weights are
+unchanged** — every kernel matches the released `.h5` bit-for-bit. Results shift slightly
+because no framework swap is bit-identical, but PyTorch stays far closer to the original
+TensorFlow output than the intermediate ONNX Runtime backend did. See
+[docs/pytorch-reimplementation.md](docs/pytorch-reimplementation.md) for the measurements
+and for guidance if you are comparing against earlier results.
 
-    wget https://www.vtk.org/files/release/9.1/VTK-9.1.0.tar.gz
-    tar -xf VTK-9.1.0.tar.gz
-    cmake ..
-    make -j$(nproc)
-    make install
-
-    git clone https://github.com/pyushkevich/greedy greedy
-    cmake ../greedy
-    make -j$(nproc)
-    make install
-    ```
 
 ### Usage of LST-AI
 

@@ -14,3 +14,8 @@ venv/
 LST_AI/model/
 LST_AI/atlas/
 lst_data.zip
+lst_data/
+lst_data.zip
+__pycache__/
+*.pyc
+.pytest_cache/

@@ -13,12 +13,14 @@ setup(
         'benedict.wiestler@tum.de'
     ],
     keywords=['lesion_segmentation', 'ms', 'lst', 'ai'],
-    # Modernised, pip-only stack (no TensorFlow, no compiled greedy, no git HD-BET):
-    #   - inference: ONNX Runtime (segment.py --backend onnx); the .h5->.onnx
-    #     conversion lives in scripts/tf_to_onnx.py and needs TF separately.
+    # Pip-only stack, PyTorch throughout (no TensorFlow, no ONNX Runtime, no compiled
+    # greedy, no git HD-BET):
+    #   - inference: native PyTorch (LST_AI/model.py). The released weights ship as
+    #     .onnx, so `onnx` is required to read them, but only as a protobuf schema
+    #     reader -- no inference runtime beyond PyTorch.
     #   - registration: picsl-greedy (Python API, same greedy engine).
     #   - brain extraction: HD-BET v2 (PyPI), which sets the python>=3.10 floor.
-    # For GPU, install onnxruntime-gpu in place of onnxruntime in the deployment image.
+    # torch also powers HD-BET, so this removes a framework rather than adding one.
     python_requires='>=3.10',
     install_requires=[
         'numpy',
@@ -27,7 +29,8 @@ setup(
         'scikit-image>=0.21.0',
         'nibabel',
         'requests',
-        'onnxruntime',
+        'torch',
+        'onnx',
         'picsl-greedy',
         'hd-bet>=2.0.1',
     ],

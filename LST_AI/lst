@@ -119,14 +119,6 @@ if __name__ == "__main__":
                         type=str,
                         default='0')
 
-    parser.add_argument('--backend',
-                        dest='backend',
-                        help='Segmentation inference backend: "onnx" (default; multi-arch, '
-                             'no TensorFlow) or "tf" (legacy TensorFlow/Keras)',
-                        type=str,
-                        choices=['onnx', 'tf'],
-                        default='onnx')
-
     parser.add_argument('--threads',
                         dest='threads',
                         help='Number of threads to be used for registration (default: all available)',
@@ -372,8 +364,7 @@ if __name__ == "__main__":
                           input_shape=(192,192,192),
                           threshold=args.threshold,
                           clipping=(min_clip, max_clip),
-                          lesion_thr=int(args.lesion_threshold),
-                          backend=args.backend)
+                          lesion_thr=int(args.lesion_threshold))
         
         # warp probability maps to FLAIR space if flag is set
         if args.probability_map:

@@ -1,0 +1,78 @@
+# CI for the PyTorch reimplementation.
+#
+# Deliberately split so the cheap, always-useful checks do not depend on the ~390 MB
+# model bundle: `import-and-unit` runs on every push in under a minute, while
+# `weights-parity` needs the bundle and is cached between runs.
+#
+# Note the Docker job builds but does not push. Pushing needs registry secrets, which
+# are a repository-level setting; wire that up only once the credentials exist.
+
+name: CI
+
+on:
+  push:
+    branches: [main, "jqm/**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  import-and-unit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install (CPU torch, no CUDA wheels)
+        run: |
+          python -m pip install --upgrade pip
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install onnx numpy scipy scikit-image nibabel pytest
+      - name: Import the package without the heavy extras
+        # picsl-greedy and hd-bet are not needed to construct or exercise the network,
+        # so this stays fast and catches import-level breakage early.
+        run: python -c "from LST_AI.model import NNUNet3D, SHIPPED_VARIANTS; print(sorted(SHIPPED_VARIANTS))"
+      - name: Architecture tests
+        run: pytest tests -q -m "not needs_weights"
+
+  weights-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache the model bundle
+        id: cache-models
+        uses: actions/cache@v4
+        with:
+          path: lst_data
+          key: lst-data-v1.3.0
+      - name: Fetch the model bundle
+        if: steps.cache-models.outputs.cache-hit != 'true'
+        run: |
+          curl -sL -o lst_data.zip https://github.com/jqmcginnis/LST-AI/releases/download/v1.3.0/lst_data.zip
+          unzip -q lst_data.zip -d lst_data
+      - name: Install
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install onnx numpy scipy scikit-image nibabel pytest
+      - name: Weights load bit-for-bit out of the released graphs
+        run: pytest tests -q -m needs_weights
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build (amd64 only in CI; arm64 needs a greedy wheel, see the Dockerfile)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          push: false

@@ -1,13 +1,10 @@
 import os
-import logging
-logging.getLogger('tensorflow').disabled = True
 import numpy as np
 import nibabel as nib
 from scipy.ndimage import label, generate_binary_structure
 
-os.environ.setdefault('TF_CPP_MIN_LOG_LEVEL', '2')
-
-# Ensemble model basenames (extension chosen by backend: .onnx or .h5).
+# Ensemble model basenames. The release bundle ships .onnx; .pt checkpoints are used
+# in preference when present, and are what `lst_ai_torch.convert` produces.
 _MODEL_STEMS = ["UNet3D_MS_final_mdlA", "UNet3D_MS_final_mdlB", "UNet3D_MS_final_mdlC"]
 
 
@@ -50,64 +47,62 @@ def remove_small_objects(data, dim_lst, unit='mm3', thr=0):
     return data
 
 
-def _make_inference(backend, model_path, device):
-    """Return a callable ``run(stem, x) -> out_seg ndarray`` for the chosen backend.
+def _make_inference(model_path, device):
+    """Return a callable ``run(stem, x) -> out_seg ndarray``, running natively in PyTorch.
 
-    backend='onnx' (default): onnxruntime — CUDAExecutionProvider when ``device`` is a
-        GPU id, else CPUExecutionProvider. Multi-arch, no TensorFlow.
-    backend='tf' (legacy): TensorFlow/Keras via LST_AI.custom_tf.
+    Loads ``<stem>.pt`` when it exists, else transfers the weights straight out of the
+    released ``<stem>.onnx`` -- so the shipped bundle works with no conversion step.
+    Reading the .onnx needs the `onnx` package (a protobuf schema reader), not
+    onnxruntime; no inference runtime other than PyTorch is involved.
 
-    Both run the ensemble UNets that output ``[out_seg, out_ds...]`` and return
-    out_seg (model output 0). Imports are lazy so an ONNX-only environment needs no
-    TensorFlow (and vice versa).
+    The graphs are NDHWC and the module is NCDHW, so the input is permuted around the
+    call and the output permuted back, leaving the rest of the pipeline unchanged.
     """
-    if backend == 'onnx':
-        import onnxruntime as ort
+    import torch
+    from LST_AI.model import NNUNet3D
+    from LST_AI.weights import load_onnx_weights
 
-        if str(device) == 'cpu':
-            providers = ['CPUExecutionProvider']
+    torch_device = torch.device('cpu' if str(device) == 'cpu' else f'cuda:{device}')
+    models = {}
+
+    def load(stem):
+        checkpoint = os.path.join(model_path, stem + '.pt')
+        if os.path.exists(checkpoint):
+            ckpt = torch.load(checkpoint, map_location=torch_device, weights_only=False)
+            cfg = dict(ckpt['config'])
+            cfg['ds_layers'] = tuple(cfg.get('ds_layers', ()))
+            mdl = NNUNet3D(**cfg)
+            mdl.load_state_dict(ckpt['state_dict'])
         else:
-            providers = [('CUDAExecutionProvider', {'device_id': int(device)}),
-                         'CPUExecutionProvider']
-        sessions = {}
+            variant = stem.rsplit('_', 1)[-1]        # UNet3D_MS_final_mdlA -> mdlA
+            mdl = NNUNet3D.shipped(variant, in_channels=2)
+            load_onnx_weights(mdl, os.path.join(model_path, stem + '.onnx'))
+        return mdl.to(torch_device).eval()
 
-        def run(stem, x):
-            if stem not in sessions:
-                sessions[stem] = ort.InferenceSession(
-                    os.path.join(model_path, stem + '.onnx'), providers=providers)
-            sess = sessions[stem]
-            return sess.run(None, {sess.get_inputs()[0].name: x})[0]  # output 0 = out_seg
+    def run(stem, x):
+        if stem not in models:
+            models[stem] = load(stem)
+        xt = torch.from_numpy(x).permute(0, 4, 1, 2, 3).contiguous().to(torch_device)
+        with torch.no_grad():
+            out = models[stem](xt)
+        out = out[0] if isinstance(out, (list, tuple)) else out
+        return out.permute(0, 2, 3, 4, 1).cpu().numpy()
 
-        return run
-
-    if backend == 'tf':
-        import tensorflow as tf
-        from LST_AI.custom_tf import load_custom_model
-
-        tf_device = '/CPU:0' if str(device) == 'cpu' else f'/GPU:{device}'
-
-        def run(stem, x):
-            with tf.device(tf_device):
-                mdl = load_custom_model(os.path.join(model_path, stem + '.h5'), compile=False)
-                out = mdl(x)
-            return out[0] if isinstance(out, (list, tuple)) else out
-
-        return run
-
-    raise ValueError(f"Unknown backend '{backend}'. Use 'onnx' or 'tf'.")
+    return run
 
 
 def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
                       output_prob_path, output_prob1_path, output_prob2_path, output_prob3_path,
                       device='cpu', probmap=False, input_shape=(192, 192, 192), threshold=0.5,
-                      clipping=(0.5, 99.5), lesion_thr=0, backend='onnx'):
+                      clipping=(0.5, 99.5), lesion_thr=0):
     """
     Segment medical images using an ensemble of U-Net models.
 
     Uses pre-trained ensemble UNets to segment T1 and FLAIR images in MNI space; the
     output is a binary lesion mask saved to ``output_segmentation_path``. Inference
-    runs through ``backend`` ('onnx', default — multi-arch, no TensorFlow; or 'tf').
-    All pre/post-processing is backend-independent.
+    Inference runs natively in PyTorch; there is no TensorFlow or ONNX Runtime
+    dependency. See docs/pytorch-reimplementation.md for how this compares to the
+    TensorFlow results the released weights were trained under.
 
     Parameters
     ----------
@@ -117,8 +112,6 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
         Skull-stripped T1 / FLAIR in MNI space.
     device : str
         GPU id (e.g. '0') or 'cpu'.
-    backend : str
-        'onnx' (default) or 'tf'.
     """
 
     def adapt_shape(img_arr):
@@ -163,8 +156,8 @@ def unet_segmentation(model_path, mni_t1, mni_flair, output_segmentation_path,
     flair = preprocess_intensities(flair, clipping)
 
     img_image = np.expand_dims(np.stack([flair, t1], axis=-1), axis=0).astype(np.float32)
-    run = _make_inference(backend, model_path, device)
-    print(f"Running segmentation (backend={backend}, device={device}).")
+    run = _make_inference(model_path, device)
+    print(f"Running segmentation (PyTorch, device={device}).")
 
     joint_seg = np.zeros(t1.shape)
     output_prob_list = [output_prob1_path, output_prob2_path, output_prob3_path]
