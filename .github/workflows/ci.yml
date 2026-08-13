@@ -64,15 +64,29 @@ jobs:
         run: pytest tests -q -m needs_weights
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-22.04-arm
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
-      - name: Build (amd64 only in CI; arm64 needs a greedy wheel, see the Dockerfile)
+      # Native runners per architecture: an arm64 image built under QEMU on an x86
+      # runner takes far longer and is only worth it if no arm runner is available.
+      - name: Build ${{ matrix.platform }}
         uses: docker/build-push-action@v6
         with:
           context: .
           file: docker/Dockerfile
-          platforms: linux/amd64
+          platforms: ${{ matrix.platform }}
           push: false
+          # arm64 has no picsl-greedy wheel on PyPI. Set the repository variable
+          # GREEDY_WHEEL_ARM64 to a prebuilt wheel URL; without it the arm64 build
+          # fails at pip install, which is the honest signal that it is still blocked.
+          build-args: |
+            GREEDY_WHEEL=${{ matrix.platform == 'linux/arm64' && vars.GREEDY_WHEEL_ARM64 || '' }}

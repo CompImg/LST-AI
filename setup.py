@@ -19,7 +19,8 @@ setup(
     #     .onnx, so `onnx` is required to read them, but only as a protobuf schema
     #     reader -- no inference runtime beyond PyTorch.
     #   - registration: picsl-greedy (Python API, same greedy engine).
-    #   - brain extraction: HD-BET v2 (PyPI), which sets the python>=3.10 floor.
+    #   - brain extraction: brainles_hd_bet, a pinned HD-BET v1 fork -- the version the
+    #     released weights were validated against, and the only one with an arm64 wheel.
     # torch also powers HD-BET, so this removes a framework rather than adding one.
     python_requires='>=3.10',
     install_requires=[
@@ -32,7 +33,7 @@ setup(
         'torch',
         'onnx',
         'picsl-greedy',
-        'hd-bet>=2.0.1',
+        'brainles_hd_bet',
     ],
     scripts=['LST_AI/lst'],
     license='MIT',

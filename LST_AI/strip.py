@@ -1,40 +1,61 @@
 import os
-import subprocess
-import shlex
 import nibabel as nib
 import numpy as np
 
 
 def run_hdbet(input_image, output_image, device, mode="accurate"):
     """
-    Runs HD-BET (v2, PyPI) to perform brain extraction on an input image.
+    Runs HD-BET to perform brain extraction on an input image.
+
+    Uses ``brainles_hd_bet``, a pinned, pip-installable fork of HD-BET v1. Two reasons
+    for that over ``hd-bet`` from PyPI:
+
+      * it is the version LST-AI v1.0.0/v1.1.0 shipped against (the released README
+        pinned HD-BET at commit ae16068, Aug 2023, which predates v2), so masks match
+        the pipeline the released weights were validated with. HD-BET v2 is a different
+        model and strips differently, which propagates into the segmentation;
+      * it publishes a ``py3-none-any`` wheel with no compiled dependencies, so it
+        installs on linux/arm64. ``hd-bet`` 2.0.1 ships an sdist only.
+
+    Called through the Python API rather than the console script: ``brainles_hd_bet``
+    0.0.11's ``hd-bet`` entry point is broken (it imports ``maybe_mkdir_p`` from
+    ``utils``, which no longer exists), and going direct avoids a subprocess and a PATH
+    dependency anyway.
 
     Parameters:
     input_image (str): Path to the input image file.
     output_image (str): Path for the brain-extracted output image. The binary brain
-        mask is written alongside as ``<output>_bet.nii.gz`` (HD-BET v2 convention).
+        mask is written alongside as ``<output>_bet.nii.gz``, keeping the filename the
+        rest of the pipeline expects regardless of HD-BET's own convention.
     device (str): GPU id (e.g. '0') or 'cpu'.
     mode (str, optional): 'accurate' (test-time augmentation on) or 'fast' (TTA off).
-        Default 'accurate'. HD-BET v2 has a single model, so this maps to the
-        --disable_tta flag rather than the v1 -mode option.
-
-    Notes
-    -----
-    HD-BET v2 selects the GPU via CUDA_VISIBLE_DEVICES + ``-device cuda`` (it no
-    longer takes a GPU index directly), so a numeric ``device`` is honoured by
-    exposing only that GPU to the subprocess. CPU always disables TTA (recommended).
     """
+    from brainles_hd_bet import run_hd_bet
+
     assert mode in ["accurate", "fast"], 'Unknown HD-BET mode. Choose "accurate" or "fast".'
 
-    env = dict(os.environ)
-    if "cpu" in str(device).lower():
-        bet_call = f"hd-bet -i {input_image} -o {output_image} -device cpu --disable_tta --save_bet_mask"
-    else:
-        tta = "--disable_tta" if mode == "fast" else ""
-        bet_call = f"hd-bet -i {input_image} -o {output_image} -device cuda {tta} --save_bet_mask"
-        env["CUDA_VISIBLE_DEVICES"] = str(device)  # honour the requested GPU id
+    on_cpu = "cpu" in str(device).lower()
+    run_hd_bet(
+        mri_fnames=[str(input_image)],
+        output_fnames=[str(output_image)],
+        mode=mode,
+        device="cpu" if on_cpu else int(device),
+        postprocess=False,
+        do_tta=(mode == "accurate") and not on_cpu,   # TTA on CPU is prohibitively slow
+        keep_mask=True,
+        overwrite=True,
+    )
 
-    subprocess.run(shlex.split(bet_call), check=True, env=env)
+    # HD-BET v1 writes the mask as <output>_mask.nii.gz; the pipeline expects
+    # <output>_bet.nii.gz (the v2 name). Normalise so callers need not care.
+    expected = str(output_image).replace(".nii.gz", "_bet.nii.gz")
+    if not os.path.exists(expected):
+        produced = str(output_image).replace(".nii.gz", "_mask.nii.gz")
+        if not os.path.exists(produced):
+            raise FileNotFoundError(
+                f"HD-BET produced no brain mask for {input_image}; expected {produced}"
+            )
+        os.replace(produced, expected)
 
 
 def apply_mask(input_image, mask, output_image):
