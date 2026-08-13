@@ -13,15 +13,20 @@ setup(
         'benedict.wiestler@tum.de'
     ],
     keywords=['lesion_segmentation', 'ms', 'lst', 'ai'],
-    # Pip-only stack, PyTorch throughout (no TensorFlow, no ONNX Runtime, no compiled
-    # greedy, no git HD-BET):
+    # Pip-only stack, PyTorch throughout (no TensorFlow, no ONNX Runtime, no
+    # onnx2torch, no compiled greedy, no git HD-BET):
     #   - inference: native PyTorch (LST_AI/model.py). The released weights ship as
     #     .onnx, so `onnx` is required to read them, but only as a protobuf schema
-    #     reader -- no inference runtime beyond PyTorch.
+    #     reader -- no inference runtime beyond PyTorch. Running under torch rather
+    #     than ONNX Runtime also bounds GPU memory: the ORT CUDA arena transiently
+    #     grabbed ~40 GB at session init and OOM'd when sharing a GPU, where torch's
+    #     caching allocator stays at a few GB.
     #   - registration: picsl-greedy (Python API, same greedy engine).
     #   - brain extraction: brainles_hd_bet, a pinned HD-BET v1 fork -- the version the
     #     released weights were validated against, and the only one with an arm64 wheel.
-    # torch also powers HD-BET, so this removes a framework rather than adding one.
+    #
+    # CPU vs CUDA is a property of the deployment's torch wheel (the host/container's
+    # CUDA), not of LST-AI, so no per-backend extra is needed.
     python_requires='>=3.10',
     install_requires=[
         'numpy',
@@ -32,6 +37,7 @@ setup(
         'requests',
         'torch',
         'onnx',
+        'h5py',
         'picsl-greedy',
         'brainles_hd_bet',
     ],

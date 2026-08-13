@@ -57,6 +57,12 @@ def _make_inference(model_path, device):
 
     The graphs are NDHWC and the module is NCDHW, so the input is permuted around the
     call and the output permuted back, leaving the rest of the pipeline unchanged.
+
+    Running under PyTorch rather than ONNX Runtime also keeps the GPU footprint bounded
+    via torch's caching allocator; the ONNX Runtime CUDA arena transiently grabbed ~40 GB
+    at session init and OOM'd under GPU contention (tw/v200_updates). This module reaches
+    the same place natively, so onnx2torch is no longer needed either -- the two agree
+    exactly (Dice 1.000000, zero voxels differing).
     """
     import torch
     from LST_AI.model import NNUNet3D
