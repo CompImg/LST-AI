@@ -19,6 +19,7 @@ jobs:
   import-and-unit:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false          # one Python version failing should not mask the other
       matrix:
         python-version: ["3.10", "3.12"]
     steps:
