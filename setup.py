@@ -1,9 +1,16 @@
+from pathlib import Path
+
 from setuptools import setup, find_packages
+
+# Without these two, PyPI renders an empty project page and twine warns on every upload.
+_README = (Path(__file__).parent / 'README.md').read_text(encoding='utf-8')
 
 setup(
     name='LST_AI',
     version='2.0.0',
     description='Lesion Segmentation Toolbox AI',
+    long_description=_README,
+    long_description_content_type='text/markdown',
     url='https://github.com/CompImg/LST-AI',
     author='LST-AI Team',
     author_email=[
