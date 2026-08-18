@@ -56,6 +56,25 @@ Useful flags: `--filters`, `--conv-blocks`, `--bottleneck-filters` and `--ds-lay
 reproduce a specific released variant; `--amp` for mixed precision on CUDA; `--no-augment`
 to disable augmentation; `--shape` for a different crop.
 
+### Monitoring a run
+
+Every epoch appends to `<out-dir>/UNet3D_MS_final_<name>.json` — loss, per-head loss,
+Dice, learning rate and wall time. That file always exists and needs no extra package.
+
+For watching a long run, add `--tensorboard`:
+
+```bash
+pip install tensorboard
+python -m lst_training.train --train-data data/train --tensorboard
+tensorboard --logdir checkpoints/tb
+```
+
+Scalars are grouped as `train/…` and `val/…` so both splits of a metric share axes, with
+each deep-supervision head logged separately — useful for spotting a head that has stopped
+contributing. Pass `--tensorboard DIR` to choose the directory; the default is
+`<out-dir>/tb/<name>`. Note this pulls in the standalone `tensorboard` package, which does
+not depend on TensorFlow.
+
 Input shape must be divisible by `2 ** conv_blocks`, and must leave more than one voxel in
 the bottleneck — instance norm over a single voxel divides by `sqrt(eps)` and collapses the
 block to its bias. `check_input_shape` rejects both cases with an explanatory error.

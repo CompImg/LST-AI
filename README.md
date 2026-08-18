@@ -127,6 +127,30 @@ You can pull it from dockerhub via executing:
 docker pull jqmcginnis/lst-ai:v1.2.0
 ```
 
+#### Building the image yourself
+
+One Dockerfile covers both flavours and both architectures — there is no separate CPU
+file to drift out of sync. It defaults to a CUDA base:
+
+```bash
+# GPU (default): nvidia/cuda:12.6.3-runtime-ubuntu22.04 + the cu126 torch wheels
+docker build -f docker/Dockerfile -t lst-ai:gpu .
+
+# CPU-only: ~2 GB instead of ~7 GB, and no NVIDIA runtime needed to run it
+docker build -f docker/Dockerfile -t lst-ai:cpu \
+  --build-arg BASE_IMAGE=ubuntu:22.04 \
+  --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cpu .
+
+# add FastSurfer (needed only for --annotate; roughly doubles the image)
+docker build -f docker/Dockerfile -t lst-ai:gpu-fs --build-arg WITH_FASTSURFER=1 .
+```
+
+Both flavours are built for `linux/amd64` and `linux/arm64` in CI. All weights — the
+LST-AI ensemble, the atlas and HD-BET's five folds — are baked in at build time, so the
+container needs no network at run time. On aarch64 the build installs `greedy` from a
+prebuilt wheel, since no official arm64 wheel is published yet; override it with
+`--build-arg GREEDY_WHEEL=<url>`, or pass an empty string to force PyPI.
+
 ### Running the LST-AI Docker Container
 Once you have pulled (or built) your Docker image using the Dockerfile provided you can run the container using the `docker run` command. Here are the steps to bind mount your files and retrieve the results:
 

@@ -40,6 +40,47 @@ def cosine_annealing(epoch: int, n_epochs: int) -> float:
     return 0.5 * (1.0 + math.cos((epoch / n_epochs) * math.pi))
 
 
+class _TensorBoard:
+    """Optional TensorBoard logging; a no-op when disabled or unavailable.
+
+    Kept optional on purpose. The JSON history written every epoch is the record that
+    always exists and needs no dependency -- TensorBoard is for watching a long run, not
+    for reconstructing it afterwards. `tensorboard` is a standalone package and does not
+    drag TensorFlow back in, but there is no reason to make training require it.
+    """
+
+    def __init__(self, log_dir: Path | None):
+        self.writer = None
+        if log_dir is None:
+            return
+        try:
+            from torch.utils.tensorboard import SummaryWriter
+        except ImportError as exc:
+            raise SystemExit(
+                f"--tensorboard needs the tensorboard package ({exc}). "
+                "pip install tensorboard, or drop the flag: the JSON history in "
+                "--out-dir is written either way."
+            )
+        self.writer = SummaryWriter(str(log_dir))
+        print(f"tensorboard: tensorboard --logdir {log_dir}")
+
+    def log(self, row: dict, epoch: int) -> None:
+        if self.writer is None:
+            return
+        for key, value in row.items():
+            if key == "epoch" or not isinstance(value, (int, float)):
+                continue
+            # train_dice -> train/dice, so TensorBoard groups the two splits and puts
+            # each metric's train and val curves on the same axes.
+            tag = key.replace("train_", "train/").replace("val_", "val/")
+            self.writer.add_scalar(tag if "/" in tag else f"misc/{tag}", value, epoch)
+        self.writer.flush()
+
+    def close(self) -> None:
+        if self.writer is not None:
+            self.writer.close()
+
+
 def _run_epoch(model, loader, criterion, device, optimizer=None, amp=False):
     """One pass; trains when ``optimizer`` is given, evaluates otherwise."""
     training = optimizer is not None
@@ -131,6 +172,11 @@ def train(args) -> Path:
           + (f", {len(val_ds)} validation volumes" if val_loader else "")
           + f", {n_ds} deep-supervision head(s), device {device}")
 
+    tb_dir = None
+    if args.tensorboard:
+        tb_dir = Path(args.tensorboard) if args.tensorboard is not True else out_dir / "tb" / name
+    board = _TensorBoard(tb_dir)
+
     history, best = [], float("inf")
     best_path = out_dir / f"UNet3D_MS_lowestTrainLoss_{name}.pt"
     for epoch in range(args.epochs):
@@ -160,8 +206,10 @@ def train(args) -> Path:
             msg += f"  |  val loss {row['val_loss']:.4f}  val dice {row['val_dice']:.4f}"
         print(msg + f"  ({row['seconds']:.1f}s)")
 
+        board.log(row, epoch)
         (out_dir / f"UNet3D_MS_final_{name}.json").write_text(json.dumps(history, indent=1))
 
+    board.close()
     final_path = out_dir / f"UNet3D_MS_final_{name}.pt"
     torch.save({"variant": name, "config": config, "epoch": args.epochs - 1,
                 "state_dict": model.state_dict()}, final_path)
@@ -206,6 +254,10 @@ def build_argparser() -> argparse.ArgumentParser:
     r.add_argument("--workers", type=int, default=4)
     r.add_argument("--amp", action="store_true", help="mixed precision (CUDA)")
     r.add_argument("--seed", type=int, default=0)
+    r.add_argument("--tensorboard", nargs="?", const=True, default=None, metavar="DIR",
+                   help="log scalars to TensorBoard; defaults to <out-dir>/tb/<name>. "
+                        "Needs `pip install tensorboard`. The JSON history is written "
+                        "regardless.")
     return p
 
 

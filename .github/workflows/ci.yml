@@ -41,8 +41,10 @@ jobs:
       - name: Architecture tests
         run: pytest tests -q -m "not needs_weights"
       - name: Training-side tests (dataset, losses, trainer)
+        # tensorboard so the --tensorboard test actually runs rather than being skipped;
+        # it is optional for users, not for CI.
         run: |
-          pip install nibabel
+          pip install nibabel tensorboard
           pytest training/tests -q
 
   weights-parity:

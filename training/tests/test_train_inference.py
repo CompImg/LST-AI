@@ -91,6 +91,35 @@ def test_training_reduces_the_loss(subjects, tmp_path):
     assert history[-1]["train_loss"] < history[0]["train_loss"]
 
 
+def test_tensorboard_logging_is_optional_and_writes_scalars(subjects, tmp_path):
+    """--tensorboard must produce readable scalars, and its absence must change nothing."""
+    pytest.importorskip("tensorboard")
+
+    train(_args(subjects, tmp_path, name="tb", tensorboard=True))
+
+    log_dir = tmp_path / "tb" / "tb"
+    events = list(log_dir.glob("events.out.tfevents.*"))
+    assert events, f"no event file under {log_dir}"
+
+    from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
+
+    acc = EventAccumulator(str(log_dir))
+    acc.Reload()
+    tags = set(acc.Tags()["scalars"])
+    # Split-prefixed so train and val land on shared axes in the UI.
+    assert {"train/loss", "train/dice", "misc/lr"} <= tags, tags
+    assert [s.step for s in acc.Scalars("train/loss")] == [0, 1]
+
+    # The JSON history is the record that exists with or without tensorboard.
+    assert (tmp_path / "UNet3D_MS_final_tb.json").exists()
+
+
+def test_training_without_tensorboard_still_writes_the_json_history(subjects, tmp_path):
+    train(_args(subjects, tmp_path, name="notb"))
+    assert (tmp_path / "UNet3D_MS_final_notb.json").exists()
+    assert not (tmp_path / "tb").exists()
+
+
 def test_cosine_schedule_matches_the_tensorflow_scheduler():
     n = 1001
     assert cosine_annealing(0, n) == pytest.approx(1.0)
