@@ -72,6 +72,11 @@ See [docs/pytorch-reimplementation.md](docs/pytorch-reimplementation.md) for the
 measurements, the cause of the ONNX drift, and guidance if you are comparing against
 earlier results.
 
+**Testing this release:** [docs/testing.md](docs/testing.md) is the validation checklist,
+split into an aarch64 and an x86_64 track. It also states plainly what has *not* been
+tested — the pipeline has never been run end to end on x86_64, and the CUDA image has
+never been run against a GPU — so if you are validating on either, start there.
+
 ### Lesion annotation with FastSurfer
 
 Lesions are assigned to anatomical regions using a FastSurfer segmentation of the T1
