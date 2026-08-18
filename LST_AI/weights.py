@@ -21,9 +21,13 @@ deep-supervision heads, which is the order ``ordered_units`` builds. ``load_onnx
 validates the count, op type and shape of every unit, so a future graph that did reorder
 would fail loudly rather than silently load transposed weights.
 
-Usage::
+This is how the ``.pt`` ensemble shipped in the v2.0.0 release was produced::
 
-    python -m lst_ai_torch.convert --onnx-dir lst_data/model --out-dir checkpoints
+    python -m LST_AI.weights --onnx-dir lst_data/model --out-dir checkpoints
+
+The checkpoints hold nothing but tensors and plain ints, so they load under
+``torch.load(..., weights_only=True)`` -- a downloaded artefact must not be able to
+execute code at load time.
 """
 
 from __future__ import annotations
@@ -33,10 +37,8 @@ import os
 from pathlib import Path
 
 import numpy as np
-import onnx
 import torch
 import torch.nn as nn
-from onnx import numpy_helper
 
 from LST_AI.model import NNUNet3D, SHIPPED_VARIANTS
 
@@ -78,6 +80,18 @@ def extract_onnx_params(onnx_path: str | os.PathLike) -> tuple[list[dict], list[
     A unit is closed by its convolution; norm params seen after it (before the next conv)
     belong to it. The 1x1 heads have no norm, so their gamma/beta stay ``None``.
     """
+    # Imported here, not at module scope: since v2.0.0 the release ships .pt, so `onnx`
+    # is an optional extra needed only to read a legacy bundle or to re-run the export.
+    try:
+        import onnx
+        from onnx import numpy_helper
+    except ImportError as exc:   # pragma: no cover - exercised only without the extra
+        raise ImportError(
+            f"reading {onnx_path} needs the optional 'onnx' package "
+            "(pip install 'LST_AI[onnx]'). The v2.0.0 release ships .pt checkpoints, "
+            "which load without it -- re-run download_data() to fetch them."
+        ) from exc
+
     graph = onnx.load(str(onnx_path)).graph
     inits = {t.name: numpy_helper.to_array(t) for t in graph.initializer}
 

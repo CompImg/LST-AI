@@ -3,16 +3,31 @@ import os
 import zipfile
 from urllib import request
 
+# Which release hosts the weights, kept separate from the package version in setup.py.
+# They are not the same thing and should not be assumed to move together: shipping an
+# additional model is a minor package release but needs a new bundle, while a pure code
+# fix is a package release against an unchanged bundle. Bump this only when the bundle's
+# contents actually change.
+#
+# STAGING: served from the fork while the first author reviews. Flip DATA_REPO to
+# CompImg/LST-AI once upstream publishes the same assets.
+DATA_REPO = "jqmcginnis/LST-AI"
+DATA_RELEASE = "v2.0.0"
+
+# Contents of lst_data.zip at DATA_RELEASE: the PyTorch ensemble
+# (UNet3D_MS_final_mdl{A,B,C}.pt) plus the MNI atlas. No compiled 'binaries' -- greedy is
+# the picsl-greedy pip package now. The .pt were exported from the ONNX graphs by
+# `python -m LST_AI.weights` and are tensor-for-tensor identical to them; those graphs
+# stay downloadable as lst_data_onnx.zip on the same release for provenance, though
+# nothing in this package needs them. See docs/pytorch-reimplementation.md.
+DATA_URL = f"https://github.com/{DATA_REPO}/releases/download/{DATA_RELEASE}/lst_data.zip"
+
+
 def download_data(path):
     """
     Downloads required model weights, binaries and atlas files for usage.
     """
-    # v1.3.0 bundle: ONNX ensemble (UNet3D_MS_final_mdl{A,B,C}.onnx) + atlas.
-    # No compiled 'binaries' (greedy is the picsl-greedy pip package now). The .onnx
-    # are produced from the .h5 by scripts/tf_to_onnx.py and shipped in this release.
-    # STAGING: served from the fork while the first author reviews; flip to
-    # CompImg/LST-AI/releases/download/v1.3.0/lst_data.zip once upstream publishes.
-    url = "https://github.com/jqmcginnis/LST-AI/releases/download/v1.3.0/lst_data.zip"
+    url = DATA_URL
 
     target_path = "lst_data.zip"
     extract_path = path  # This is the base directory.

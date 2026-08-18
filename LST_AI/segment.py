@@ -3,8 +3,8 @@ import numpy as np
 import nibabel as nib
 from scipy.ndimage import label, generate_binary_structure
 
-# Ensemble model basenames. The release bundle ships .onnx; .pt checkpoints are used
-# in preference when present, and are what `lst_ai_torch.convert` produces.
+# Ensemble model basenames. The v2.0.0 bundle ships .pt; a v1.3.0 .onnx bundle still
+# loads, via the fallback in _make_inference.
 _MODEL_STEMS = ["UNet3D_MS_final_mdlA", "UNet3D_MS_final_mdlB", "UNet3D_MS_final_mdlC"]
 
 
@@ -50,10 +50,12 @@ def remove_small_objects(data, dim_lst, unit='mm3', thr=0):
 def _make_inference(model_path, device):
     """Return a callable ``run(stem, x) -> out_seg ndarray``, running natively in PyTorch.
 
-    Loads ``<stem>.pt`` when it exists, else transfers the weights straight out of the
-    released ``<stem>.onnx`` -- so the shipped bundle works with no conversion step.
-    Reading the .onnx needs the `onnx` package (a protobuf schema reader), not
-    onnxruntime; no inference runtime other than PyTorch is involved.
+    Loads ``<stem>.pt`` when it exists -- what the v2.0.0 bundle ships -- and otherwise
+    transfers the weights straight out of a legacy ``<stem>.onnx``, so a v1.3.0 bundle
+    keeps working. That fallback needs the optional `onnx` package (a protobuf schema
+    reader), not onnxruntime; no inference runtime other than PyTorch is involved. The
+    two paths were checked tensor-for-tensor equal, so the source of the weights makes
+    no difference to the output.
 
     The graphs are NDHWC and the module is NCDHW, so the input is permuted around the
     call and the output permuted back, leaving the rest of the pipeline unchanged.
@@ -73,16 +75,25 @@ def _make_inference(model_path, device):
 
     def load(stem):
         checkpoint = os.path.join(model_path, stem + '.pt')
+        legacy = os.path.join(model_path, stem + '.onnx')
         if os.path.exists(checkpoint):
-            ckpt = torch.load(checkpoint, map_location=torch_device, weights_only=False)
+            # weights_only=True: the checkpoint is a download, so loading it must not be
+            # able to run code. The payload is tensors and ints only, so this suffices.
+            ckpt = torch.load(checkpoint, map_location=torch_device, weights_only=True)
             cfg = dict(ckpt['config'])
             cfg['ds_layers'] = tuple(cfg.get('ds_layers', ()))
             mdl = NNUNet3D(**cfg)
             mdl.load_state_dict(ckpt['state_dict'])
-        else:
+        elif os.path.exists(legacy):
             variant = stem.rsplit('_', 1)[-1]        # UNet3D_MS_final_mdlA -> mdlA
             mdl = NNUNet3D.shipped(variant, in_channels=2)
-            load_onnx_weights(mdl, os.path.join(model_path, stem + '.onnx'))
+            load_onnx_weights(mdl, legacy)
+        else:
+            raise FileNotFoundError(
+                f"no weights for {stem} in {model_path}: expected {stem}.pt (the current "
+                f"bundle) or {stem}.onnx (a legacy one). Run "
+                "LST_AI.utils.download_data() to fetch them."
+            )
         return mdl.to(torch_device).eval()
 
     def run(stem, x):

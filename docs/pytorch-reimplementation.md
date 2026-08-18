@@ -16,13 +16,14 @@ serves both the released weights and anything trained next.
 | | before | after |
 |---|---|---|
 | inference | TensorFlow / ONNX Runtime | native PyTorch (`LST_AI/model.py`) |
-| weights | `.h5` / `.onnx` | unchanged — read from the shipped `.onnx`, or `.pt` if present |
+| weights | `.h5` / `.onnx` | same tensors, reserialised as `.pt` |
 | registration | greedy | greedy (unchanged) |
 | skull stripping | HD-BET | HD-BET (unchanged, already PyTorch) |
 | pre/post-processing | — | unchanged |
 
-`onnx` remains a dependency, but only as a protobuf reader for the shipped weights — no
-inference runtime other than PyTorch is involved. `--backend` is gone from the CLI.
+`onnx` is no longer a dependency at all. It survives as an optional extra
+(`pip install 'LST_AI[onnx]'`) for two things only: reading a legacy `.onnx` bundle, and
+re-running the export that produced the shipped `.pt`. `--backend` is gone from the CLI.
 
 ## The weights are the released ones
 
@@ -30,6 +31,25 @@ Every convolution kernel, gamma and beta in the PyTorch model equals the corresp
 tensor in the released `.h5` **bit-for-bit** (max |Δ| = 0.000e+00, all three ensemble
 members), checked against `lst_data.zip` from CompImg/LST-AI v1.1.0. Nothing was
 retrained, refitted or approximated.
+
+### Provenance of the shipped `.pt`
+
+The chain is `.h5` → `.onnx` → `.pt`, and every link is exact:
+
+1. `.h5` → `.onnx` by tf2onnx (`scripts/tf_to_onnx.py`). Published as `lst_data_onnx.zip`
+   on the v2.0.0 release; sha256 `b17147e9…0fa018`, unchanged since v1.3.0.
+2. `.onnx` → `.pt` by `python -m LST_AI.weights --onnx-dir … --out-dir …`, which copies
+   initializers into the module without arithmetic.
+
+Step 2 is re-run in CI on every push and held to exact equality — all 304 state-dict
+tensors across the three members (102 / 100 / 102), plus a forward pass on a fixed
+input, must be *bitwise* identical between the two paths, not merely close. Because they are, the
+weight format cannot change segmentation output for any subject; a Dice comparison
+between the two would be measuring nothing.
+
+The checkpoints carry only tensors and plain integers, so they load under
+`torch.load(..., weights_only=True)`. That matters for an artefact users download: it
+means loading the weights cannot execute code.
 
 Note the `.h5` needs Keras 2 to load (TF ≥ 2.16 / Keras 3 rejects it — `Conv3DTranspose`
 carries a `groups: 1` key Keras 3 does not accept). Use `tf-keras` with

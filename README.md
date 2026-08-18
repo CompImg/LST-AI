@@ -26,9 +26,10 @@ To allow the usage of LST-AI on different platforms and online/offline usage, we
 
 ### Installing the Python package
 
-LST-AI installs from pip. Inference runs in **PyTorch** — there is no TensorFlow and no
-ONNX Runtime dependency. `greedy` (registration) and HD-BET (skull stripping) install as
-wheels too, so nothing is compiled.
+LST-AI installs from pip. Inference runs in **PyTorch** — there is no TensorFlow, no ONNX
+Runtime and, since v2.0.0, no `onnx` dependency either: the released weights ship as `.pt`
+checkpoints. `greedy` (registration) and HD-BET (skull stripping) install as wheels too,
+so nothing is compiled.
 
 ```bash
 python3 -m venv lst_env && source lst_env/bin/activate
@@ -169,7 +170,7 @@ Please consider citing [LST-AI](https://www.medrxiv.org/content/10.1101/2023.11.
 }
 ```
 
-Further, please also credit [greedy](https://greedy.readthedocs.io/en/latest/), and [HD-BET](https://github.com/MIC-DKFZ/HD-BET) used for preprocessing the image data.
+Further, please also credit [greedy](https://greedy.readthedocs.io/en/latest/) and [HD-BET](https://github.com/MIC-DKFZ/HD-BET), used for preprocessing the image data, and — if you use `--annotate` — [FastSurfer](https://github.com/Deep-MI/FastSurfer), which provides the anatomical parcellation lesions are assigned to.
 
 greedy
 ```
@@ -195,5 +196,33 @@ HD-BET:
   pages={4952--4964},
   year={2019},
   publisher={Wiley Online Library}
+}
+```
+
+FastSurfer (only relevant if you run `--annotate`). LST-AI calls FastSurfer with
+`--seg_only`, so it uses the FastSurferVINN whole-brain segmentation network rather than
+the surface pipeline; cite both the pipeline paper and the VINN paper, as FastSurfer
+itself asks:
+```
+@article{henschel2020fastsurfer,
+  title={FastSurfer -- A fast and accurate deep learning based neuroimaging pipeline},
+  author={Henschel, Leonie and Conjeti, Sailesh and Estrada, Santiago and Diers, Kersten and Fischl, Bruce and Reuter, Martin},
+  journal={NeuroImage},
+  volume={219},
+  pages={117012},
+  year={2020},
+  publisher={Elsevier},
+  doi={10.1016/j.neuroimage.2020.117012}
+}
+
+@article{henschel2022fastsurfervinn,
+  title={FastSurferVINN: Building resolution-independence into deep learning segmentation methods -- A solution for HighRes brain MRI},
+  author={Henschel, Leonie and K{\"u}gler, David and Reuter, Martin},
+  journal={NeuroImage},
+  volume={251},
+  pages={118933},
+  year={2022},
+  publisher={Elsevier},
+  doi={10.1016/j.neuroimage.2022.118933}
 }
 ```

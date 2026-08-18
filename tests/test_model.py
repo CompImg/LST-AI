@@ -132,6 +132,54 @@ def test_weights_load_bitwise_from_the_released_graph(variant: str):
 
 @pytest.mark.needs_weights
 @pytest.mark.parametrize("variant", sorted(SHIPPED_VARIANTS))
+def test_exported_checkpoint_is_a_bit_exact_substitute_for_the_graph(variant: str, tmp_path):
+    """Guards the v2.0.0 bundle: .pt must be indistinguishable from the .onnx it came from.
+
+    The release ships checkpoints exported by ``python -m LST_AI.weights``, so this runs
+    that exporter and holds the result to exact equality -- tensors *and* a forward pass.
+    A tolerance would be the wrong test here: nothing in the export is allowed to be
+    approximate, and if the tensors match then segmentation output matches by
+    construction, whatever the subject.
+    """
+    from LST_AI.weights import convert_variant, main as export_main
+
+    if not _onnx(variant).exists():
+        pytest.skip(f"{_onnx(variant)} not present")
+
+    import sys
+    from unittest.mock import patch
+
+    argv = ["weights", "--onnx-dir", str(MODEL_DIR), "--out-dir", str(tmp_path),
+            "--variants", variant]
+    with patch.object(sys, "argv", argv):
+        assert export_main() == 0
+
+    # weights_only=True is a property of the artefact we publish, not an implementation
+    # detail: a downloaded checkpoint must not be able to execute code at load time.
+    ckpt = torch.load(tmp_path / f"UNet3D_MS_final_{variant}.pt",
+                      map_location="cpu", weights_only=True)
+    cfg = dict(ckpt["config"])
+    cfg["ds_layers"] = tuple(cfg["ds_layers"])
+    restored = NNUNet3D(**cfg)
+    restored.load_state_dict(ckpt["state_dict"])
+    restored.eval()
+
+    reference = convert_variant(variant, MODEL_DIR)
+    a, b = reference.state_dict(), restored.state_dict()
+    assert a.keys() == b.keys()
+    assert not [k for k in a if not torch.equal(a[k], b[k])]
+
+    torch.manual_seed(0)
+    x = torch.randn(1, 2, 64, 64, 64)
+    with torch.no_grad():
+        ya, yb = reference(x), restored(x)
+    for p, q in zip(ya if isinstance(ya, (list, tuple)) else [ya],
+                    yb if isinstance(yb, (list, tuple)) else [yb]):
+        assert torch.equal(p, q)
+
+
+@pytest.mark.needs_weights
+@pytest.mark.parametrize("variant", sorted(SHIPPED_VARIANTS))
 def test_graph_uses_the_numerics_we_pin(variant: str):
     """Read the activation slope and norm epsilon back out of the shipped graph."""
     import onnx

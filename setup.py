@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='LST_AI',
-    version='1.3.0',
+    version='2.0.0',
     description='Lesion Segmentation Toolbox AI',
     url='https://github.com/CompImg/LST-AI',
     author='LST-AI Team',
@@ -13,14 +13,13 @@ setup(
         'benedict.wiestler@tum.de'
     ],
     keywords=['lesion_segmentation', 'ms', 'lst', 'ai'],
-    # Pip-only stack, PyTorch throughout (no TensorFlow, no ONNX Runtime, no
-    # onnx2torch, no compiled greedy, no git HD-BET):
-    #   - inference: native PyTorch (LST_AI/model.py). The released weights ship as
-    #     .onnx, so `onnx` is required to read them, but only as a protobuf schema
-    #     reader -- no inference runtime beyond PyTorch. Running under torch rather
-    #     than ONNX Runtime also bounds GPU memory: the ORT CUDA arena transiently
-    #     grabbed ~40 GB at session init and OOM'd when sharing a GPU, where torch's
-    #     caching allocator stays at a few GB.
+    # Pip-only stack, PyTorch throughout (no TensorFlow, no ONNX Runtime, no onnx,
+    # no onnx2torch, no compiled greedy, no git HD-BET):
+    #   - inference: native PyTorch (LST_AI/model.py). Since v2.0.0 the released
+    #     weights ship as .pt, so nothing outside torch is needed to read them.
+    #     Running under torch rather than ONNX Runtime also bounds GPU memory: the
+    #     ORT CUDA arena transiently grabbed ~40 GB at session init and OOM'd when
+    #     sharing a GPU, where torch's caching allocator stays at a few GB.
     #   - registration: picsl-greedy (Python API, same greedy engine).
     #   - brain extraction: brainles_hd_bet, a pinned HD-BET v1 fork -- the version the
     #     released weights were validated against, and the only one with an arm64 wheel.
@@ -36,11 +35,15 @@ setup(
         'nibabel',
         'requests',
         'torch',
-        'onnx',
         'h5py',
         'picsl-greedy',
         'brainles_hd_bet',
     ],
+    extras_require={
+        # Only for reading a legacy v1.3.0 .onnx bundle, or re-running the .onnx -> .pt
+        # export in LST_AI/weights.py. Not needed to run inference.
+        'onnx': ['onnx'],
+    },
     scripts=['LST_AI/lst'],
     license='MIT',
     packages=find_packages(include=['LST_AI']),
