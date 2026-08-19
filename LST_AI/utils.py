@@ -22,8 +22,15 @@ DATA_RELEASE = "v2.0.0"
 # nothing in this package needs them. See docs/pytorch-reimplementation.md.
 DATA_URL = f"https://github.com/{DATA_REPO}/releases/download/{DATA_RELEASE}/lst_data.zip"
 
+# Where the bundle is unpacked to, and read back from: next to this package. Note this is
+# *not* where the `lst` script lives -- setup.py ships it via scripts=, so it is installed
+# into .../bin, a directory that has nothing to do with the package and that a non-root
+# user cannot write to. Resolving from the package instead keeps the download target and
+# the read location the same in every install, and lets a container bake the bundle in.
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 
-def download_data(path):
+
+def download_data(path=DATA_DIR):
     """
     Downloads required model weights, binaries and atlas files for usage.
     """
