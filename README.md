@@ -235,10 +235,19 @@ docker run -v [path_on_host]:[path_in_container] [image_name]
 Given our provided GPU Dockerfile command, the run command might look something like this:
 
 ```bash
-docker run -v /home/ginnis/lst_in:/custom_apps/lst_input -v /home/ginnis/lst_out/:/custom_apps/lst_output -v /home/ginnis/lst_temp/:/custom_apps/lst_temp lst-ai:gpu --t1 /custom_apps/lst_input/t1.nii.gz --flair /custom_apps/lst_input/flair3d.nii.gz --output /custom_apps/lst_output --temp /custom_apps/lst_temp
-```
+docker run --gpus all -v /home/ginnis/lst_in:/custom_apps/lst_input -v /home/ginnis/lst_out/:/custom_apps/lst_output -v /home/ginnis/lst_temp/:/custom_apps/lst_temp lst-ai:gpu --t1 /custom_apps/lst_input/t1.nii.gz --flair /custom_apps/lst_input/flair3d.nii.gz --output /custom_apps/lst_output --temp /custom_apps/lst_temp
+```  
 
 __Note__: Ensure your paths are absolute, as Docker requires absolute paths for bind mounts. Since you've bind-mounted your output directory to `/home/ginnis/lst_out/` on your host, the results from the Docker container will be written directly to this directory. No additional steps are needed to retrieve the results, they will appear in this directory after the container has finished processing.
+
+#### Running on CPU
+Run docker using the CPU image:
+
+```bash
+docker run -v /home/ginnis/lst_in:/custom_apps/lst_input -v /home/ginnis/lst_out/:/custom_apps/lst_output -v /home/ginnis/lst_temp/:/custom_apps/lst_temp lst-ai:cpu --t1 /custom_apps/lst_input/t1.nii.gz --flair /custom_apps/lst_input/flair3d.nii.gz --output /custom_apps/lst_output --temp /custom_apps/lst_temp --device cpu
+```  
+
+__Note__: Omit the `--gpus all` and add `--device cpu`, and replace use the cpu image `lst-ai:cpu` instead of the gpu image `lst-ai:gpu`.
 
 #### Who owns the results: run as yourself
 
@@ -254,8 +263,7 @@ unblocks the run, it does not change who ends up owning the files.
 To own the results yourself, add `-u $(id -u):$(id -g)`:
 
 ```bash
-docker run -u $(id -u):$(id -g) -v /home/ginnis/lst_in:/in -v /home/ginnis/lst_out:/out \
-  lst-ai:gpu --t1 /in/t1.nii.gz --flair /in/flair3d.nii.gz --output /out
+docker run -u $(id -u):$(id -g) --gpus all -v /home/ginnis/lst_in:/in -v /home/ginnis/lst_out:/out lst-ai:gpu --t1 /in/t1.nii.gz --flair /in/flair3d.nii.gz --output /out
 ```
 
 The bind-mounted directories have to be writable by that uid, which they are if they are
