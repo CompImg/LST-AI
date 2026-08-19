@@ -20,7 +20,7 @@ from LST_AI.register import mni_registration, rigid_reg, apply_warp_label, apply
 from LST_AI.segment import unet_segmentation
 from LST_AI.annotate import annotate_lesions
 from LST_AI.stats import compute_stats
-from LST_AI.utils import download_data
+from LST_AI.utils import DATA_DIR, download_data
 
 if __name__ == "__main__":
 
@@ -127,8 +127,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    print(f"Looking for model weights in {os.path.dirname(__file__)}.")
-    download_data(path=os.path.dirname(__file__))
+    print(f"Looking for model weights in {DATA_DIR}.")
+    download_data(path=DATA_DIR)
 
     # Sanity Checks
     assert os.path.exists(args.t1), 'LST.AI aborted. T1w Image Path does not exist.'
@@ -202,16 +202,12 @@ if __name__ == "__main__":
     path_affine_mni_t1w = os.path.join(work_dir, 'affine_t1w_to_mni.mat')
     path_affine_mni_flair = os.path.join(work_dir, 'affine_flair_to_mni.mat')
 
-    # directories
-    lst_dir = os.path.dirname(__file__)
-    parent_dir = os.path.dirname(__file__)
-
     # atlas files
-    t1w_atlas = os.path.join(parent_dir, "atlas", "sub-mni152_space-mni_t1.nii.gz")
-    t1w_atlas_stripped = os.path.join(parent_dir, "atlas", "sub-mni152_space-mni_t1bet.nii.gz")
+    t1w_atlas = os.path.join(DATA_DIR, "atlas", "sub-mni152_space-mni_t1.nii.gz")
+    t1w_atlas_stripped = os.path.join(DATA_DIR, "atlas", "sub-mni152_space-mni_t1bet.nii.gz")
 
     # model weights
-    model_directory = os.path.join(parent_dir, 'model')
+    model_directory = os.path.join(DATA_DIR, 'model')
 
     # make output path (in case it does not exist)
     if not os.path.exists(args.output):
