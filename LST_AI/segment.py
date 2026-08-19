@@ -26,7 +26,7 @@ def remove_small_objects(data, dim_lst, unit='mm3', thr=0):
     Returns:
         ndarray: Array with small objects.
     """
-    print(f"Thresholding lesions at [mm3]:{np.prod(dim_lst)}")
+    print(f"Thresholding lesions at [mm3]:{thr}")
 
     px, py, pz = dim_lst
     bin_structure = generate_binary_structure(3, 2)
