@@ -29,8 +29,8 @@ If you are testing on **x86_64**, you want [Track B](#track-b--x86_64). On **aar
    exercised on CPU, but no GPU has executed it.
 3. **CI does not segment a subject.** It builds and unit-tests only. A regression that
    breaks registration or skull-stripping would pass CI.
-4. **FastSurfer annotation (`--annotate`) has had no end-to-end run** on either
-   architecture; it is off by default in the image (`WITH_FASTSURFER=1` to include it).
+4. **FastSurfer annotation has had no end-to-end run on real data** on either
+   architecture. Annotation runs in every mode except `--segment_only`, so FastSurfer and its VINN checkpoints ship in the standard build.
 
 ## Before you start: expected variation
 
