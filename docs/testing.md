@@ -188,12 +188,12 @@ One Dockerfile covers both flavours and both architectures. All weights are bake
 the container needs no network at run time.
 
 ```bash
-# CPU (~2 GB)
+# CPU (~4 GB)
 docker build -f docker/Dockerfile -t lst-ai:cpu \
   --build-arg BASE_IMAGE=ubuntu:22.04 \
   --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cpu .
 
-# CUDA (~7 GB)
+# CUDA (~17 GB)
 docker build -f docker/Dockerfile -t lst-ai:gpu .
 ```
 
