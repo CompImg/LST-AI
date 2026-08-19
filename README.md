@@ -38,7 +38,9 @@ pip install -e .
 ```
 
 That pulls in `torch`, `picsl-greedy` and `hd-bet`. The model bundle and atlas are
-downloaded automatically on first run.
+downloaded automatically on first run. It does *not* pull in FastSurfer, which a default
+run needs to annotate lesions — see [Lesion annotation with
+FastSurfer](#lesion-annotation-with-fastsurfer). The Docker image ships it; pip does not.
 
 **On linux/arm64**, `picsl-greedy` has no wheel on PyPI (Kitware publishes the VTK
 wheel-SDK for x86_64 only, so greedy has to build VTK from source). Until aarch64 wheels
@@ -80,9 +82,42 @@ never been run against a GPU — so if you are validating on either, start there
 ### Lesion annotation with FastSurfer
 
 Lesions are assigned to anatomical regions using a FastSurfer segmentation of the T1
-(`--seg_only`, so no FreeSurfer and no surface pipeline). FastSurfer is a large optional
-extra: install it separately, or build the Docker image with
-`--build-arg WITH_FASTSURFER=1`. Segmentation alone (`--segment_only`) does not need it.
+(`--seg_only`, so no FreeSurfer and no surface pipeline). This is not an optional stage:
+every mode except `--segment_only` runs it, the default one included, so FastSurfer is a
+hard requirement of a normal `lst` run and ships inside the Docker image. Installing
+LST-AI with pip installs no FastSurfer — put `run_fastsurfer.sh` on your `PATH`
+yourself, or use the image, unless you only ever pass `--segment_only`.
+
+#### Installing FastSurfer alongside a pip install
+
+LST-AI shells out to `run_fastsurfer.sh`, so FastSurfer only has to be on your `PATH`
+with its dependencies importable from the same environment:
+
+```bash
+# 1. clone it, pinned to the version the Docker image ships
+git clone --depth 1 --branch v2.5.4 https://github.com/Deep-MI/FastSurfer.git ~/FastSurfer
+
+# 2. the dependencies of the segmentation path, into your LST-AI environment
+#    (the rest of what it needs — numpy, scipy, nibabel, h5py, scikit-image — LST-AI
+#    already brings)
+pip install torchvision lapy neuroreg pandas torchio tqdm yacs pyyaml
+
+# 3. the three VINN checkpoints (~65 MB), so the first run does not go fetch them
+PYTHONPATH=~/FastSurfer python ~/FastSurfer/FastSurferCNN/download_checkpoints.py --vinn
+
+# 4. make it findable — add these to your ~/.bashrc to keep them
+export FASTSURFER_HOME=~/FastSurfer
+export PATH="$FASTSURFER_HOME:$PATH"
+```
+
+Check it with `run_fastsurfer.sh --version`, which should print `2.5.4+…`.
+
+**Do not `pip install ~/FastSurfer` itself.** Its metadata pins `torch==2.7.*` and would
+downgrade the torch you installed for LST-AI (on aarch64 there is no CUDA wheel for that
+version at all, so you would silently land on a CPU build), and it pulls `meshpy` for the
+corpus-callosum module, which LST-AI switches off and which has no aarch64 wheel. Step 2
+is that dependency list minus those two problems; `docker/Dockerfile` carries the same
+list with upstream's version floors, and is the authoritative copy.
 
 ### Training your own models
 
@@ -141,20 +176,69 @@ file to drift out of sync. It defaults to a CUDA base:
 # GPU (default): nvidia/cuda:12.6.3-runtime-ubuntu22.04 + the cu126 torch wheels
 docker build -f docker/Dockerfile -t lst-ai:gpu .
 
-# CPU-only: ~2 GB instead of ~7 GB, and no NVIDIA runtime needed to run it
+# CPU-only: ~4 GB instead of ~17 GB, and no NVIDIA runtime needed to run it
 docker build -f docker/Dockerfile -t lst-ai:cpu \
   --build-arg BASE_IMAGE=ubuntu:22.04 \
   --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cpu .
-
-# add FastSurfer (needed only for --annotate; roughly doubles the image)
-docker build -f docker/Dockerfile -t lst-ai:gpu-fs --build-arg WITH_FASTSURFER=1 .
 ```
 
-Both flavours are built for `linux/amd64` and `linux/arm64` in CI. All weights — the
-LST-AI ensemble, the atlas and HD-BET's five folds — are baked in at build time, so the
-container needs no network at run time. On aarch64 the build installs `greedy` from a
-prebuilt wheel, since no official arm64 wheel is published yet; override it with
-`--build-arg GREEDY_WHEEL=<url>`, or pass an empty string to force PyPI.
+Both flavours are built for `linux/amd64` and `linux/arm64` in CI. All weights — the LST-AI
+ensemble, the atlas, HD-BET's five folds and FastSurfer's three VINN checkpoints — are
+baked in at build time, so the container needs no network at run time. On aarch64 the
+build installs `greedy` from a prebuilt wheel, since no official arm64 wheel is
+published yet; override it with `--build-arg GREEDY_WHEEL=<url>`, or pass an empty
+string to force PyPI. 
+
+#### Building behind a TLS-inspecting proxy
+
+Many hospital and university networks inspect HTTPS traffic, re-signing it with their own
+root certificate. Your machine trusts it; a fresh Docker container does not, so the build
+fails at the first download with `CERTIFICATE_VERIFY_FAILED: unable to get local issuer
+certificate`. The certificate has to be added manually:
+
+**1. Create a directory for the certificates**
+
+```bash
+mkdir -p docker/certs
+```
+
+**2. Copy your organisation's root certificate into it**
+
+On Debian/Ubuntu hosts it is usually already installed locally:
+
+```bash
+cp /usr/local/share/ca-certificates/*.crt docker/certs/
+```
+
+Otherwise ask your IT department for it. Files must be PEM format
+(they start with `-----BEGIN CERTIFICATE-----`) and end in `.crt`, or they are ignored.
+
+**3. Add these lines to `docker/Dockerfile`**
+
+Place them directly after the `apt-get install` block and before the first `pip install`:
+
+```dockerfile
+COPY docker/certs/ /usr/local/share/ca-certificates/
+RUN update-ca-certificates
+ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
+    REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
+    GIT_SSL_CAINFO=/etc/ssl/certs/ca-certificates.crt
+```
+
+The `ENV` block is needed because pip ships its own certificate store and ignores the
+system one. The other variables cover the model weight downloads, which use `requests`
+and `git` rather than pip.
+
+**4. Build as usual**
+
+```bash
+docker build -f docker/Dockerfile -t lst-ai:gpu .
+```
+
+Do not commit the certificates or the Dockerfile change. The resulting image trusts your
+organisation's CA, so it should not be pushed to a public registry.
 
 ### Running the LST-AI Docker Container
 Once you have pulled (or built) your Docker image using the Dockerfile provided you can run the container using the `docker run` command. Here are the steps to bind mount your files and retrieve the results:
@@ -174,6 +258,22 @@ docker run -v /home/ginnis/lst_in:/custom_apps/lst_input -v /home/ginnis/lst_out
 ```
 
 __Note__: Ensure your paths are absolute, as Docker requires absolute paths for bind mounts. Since you've bind-mounted your output directory to `/home/ginnis/lst_out/` on your host, the results from the Docker container will be written directly to this directory. No additional steps are needed to retrieve the results, they will appear in this directory after the container has finished processing.
+
+#### Who owns the results: run as yourself
+
+The container runs as root unless told otherwise. As root, everything it writes into your
+bind-mounted output and temp directories comes out owned by `root`, and you need `sudo`
+to clean it up. This can be an issue, particularly for FastSurfer. By default, LST-AI avoids this issue through FastSurfer's `--allow_root`. To avoid the container running as root, add `-u` to get files you own:
+
+```bash
+docker run -u $(id -u):$(id -g) -v /home/ginnis/lst_in:/in -v /home/ginnis/lst_out:/out \
+  lst-ai:gpu --t1 /in/t1.nii.gz --flair /in/flair3d.nii.gz --output /out
+```
+
+The bind-mounted directories have to be writable by that uid, which they are if they are
+yours. Nothing else needs changing: every weight is baked in and world-readable, so no
+stage tries to download into a directory a normal user cannot write to, and LST-AI drops
+FastSurfer's `--allow_root` when it is not running as root.
 
 #### Extending and modifying LST-AI for your custom code and pipeline
 
@@ -199,7 +299,7 @@ Please consider citing [LST-AI](https://www.medrxiv.org/content/10.1101/2023.11.
 }
 ```
 
-Further, please also credit [greedy](https://greedy.readthedocs.io/en/latest/) and [HD-BET](https://github.com/MIC-DKFZ/HD-BET), used for preprocessing the image data, and — if you use `--annotate` — [FastSurfer](https://github.com/Deep-MI/FastSurfer), which provides the anatomical parcellation lesions are assigned to.
+Further, please also credit [greedy](https://greedy.readthedocs.io/en/latest/) and [HD-BET](https://github.com/MIC-DKFZ/HD-BET), used for preprocessing the image data, and — unless you run `--segment_only` — [FastSurfer](https://github.com/Deep-MI/FastSurfer), which provides the anatomical parcellation lesions are assigned to.
 
 greedy
 ```
@@ -228,7 +328,7 @@ HD-BET:
 }
 ```
 
-FastSurfer (only relevant if you run `--annotate`). LST-AI calls FastSurfer with
+FastSurfer (used by every mode except `--segment_only`). LST-AI calls FastSurfer with
 `--seg_only`, so it uses the FastSurferVINN whole-brain segmentation network rather than
 the surface pipeline; cite both the pipeline paper and the VINN paper, as FastSurfer
 itself asks:
