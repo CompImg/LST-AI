@@ -80,10 +80,22 @@ def get_fastsurfer(im_path, seg_path, device):
         This function produces a FastSurfer segmentation. 
     """
           
-    # define paths for FastSurfer
-    sd_path = os.path.dirname(os.path.dirname(im_path))
-    sid = os.path.basename(os.path.dirname(im_path))
+    # define output folder "fastsurfer" for FastSurfer results, which simplifies data housekeeping
+    sd_path = os.path.dirname(im_path)
+    sid = 'fastsurfer'
     
+    # LST-AI's --device is a bare GPU id ('0') or 'cpu'; FastSurfer names devices the way
+    # torch does, where a bare id is not a device at all ('0' raises "Invalid device
+    # string"). Translate, as LST_AI/segment.py does, and pass a torch-style string
+    # through untouched.
+    dev = str(device).strip().lower()
+    fs_device = dev if dev in ('cpu', 'mps', 'auto') or dev.startswith('cuda') else f'cuda:{dev}'
+
+    # FastSurfer refuses to start as root unless told otherwise, because everything it
+    # writes would come out root-owned. Inside the Docker image LST-AI *is* root, so that
+    # refusal is the whole annotation stage failing; opt in exactly where it applies.
+    allow_root = '--allow_root' if os.geteuid() == 0 else ''
+
     # call FastSurfer cross sectional segmentation
     print(f'Running FastSurfer ...')
     cmd = f'''
@@ -91,7 +103,7 @@ def get_fastsurfer(im_path, seg_path, device):
             --t1 {im_path} 
             --sd {sd_path} 
             --sid {sid} 
-            --device {device}
+            --device {fs_device}
             --seg_only 
             --threads 4 
             --no_cereb 
@@ -99,12 +111,10 @@ def get_fastsurfer(im_path, seg_path, device):
             --no_cc
             --no_biasfield
             --keepgeom
+            {allow_root}
             '''
     
-    env = dict(os.environ)
-    if "cuda" in str(device).lower():
-        env["CUDA_VISIBLE_DEVICES"] = str(device).split(':')[-1]  # honour the requested GPU id
-    subprocess.run(shlex.split(cmd), check=True, env=env)
+    subprocess.run(shlex.split(cmd), check=True)
 
     # check if folder contains aseg.auto_noCCseg.mgz file, indicating that FastSurfer successfully finished
     # and convert to nifti
@@ -115,13 +125,10 @@ def get_fastsurfer(im_path, seg_path, device):
     else:
         raise ValueError(f'{seg_mgz_path}: FastSurfer segmentation failed!')
     
-    # Housekeeping: remove the remaining FastSurfer output folder
-    fastsurfer_output_folder_mri = os.path.join(sd_path, sid, 'mri')
-    fastsurfer_output_folder_scripts = os.path.join(sd_path, sid, 'scripts')
-    if os.path.exists(fastsurfer_output_folder_mri):
-        shutil.rmtree(fastsurfer_output_folder_mri)
-    if os.path.exists(fastsurfer_output_folder_scripts):
-        shutil.rmtree(fastsurfer_output_folder_scripts)
+    # Housekeeping: remove the remaining FastSurfer output folder.
+    fastsurfer_output_folder = os.path.join(sd_path, sid)
+    if os.path.exists(fastsurfer_output_folder):
+        shutil.rmtree(fastsurfer_output_folder)
 
 def convert_labels(segmentation, label_mapping=FASTSURFER_LABEL_MAPPING):
     """
