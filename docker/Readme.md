@@ -1,51 +1,70 @@
-#### Building the docker
+# Building the LST-AI Docker images
 
-Info: We are happy to support both ARM64 and AMD64 platforms with the newest docker container.
+Most users do not need to build anything — release images are published to Docker Hub as
+multi-arch manifests, see the [README](../README.md#dockerfile-and-dockerhub). This page
+is for building the images yourself.
 
-#### Guide on how to build the docker natively, and (tp push it to dockerhub)
+## One Dockerfile, two flavours, two architectures
 
-To build and push a Docker image for both linux/amd64 and linux/arm64/v8 platforms and then push it to Docker Hub under the name jqmcginnis/lst-ai, you can follow these steps:
-
-#### 1. Log in to dockerhub
-
-Open your terminal and log in to your Docker Hub account using the Docker CLI:
-
-```bash
-docker login
-```
-Enter your Docker Hub username and password when prompted.
-
-#### 2. Enable Buildx (if not already enabled)
-
-Docker Buildx is an extended build feature that supports building multi-platform images. To ensure it is enabled, run:
+There is a single [Dockerfile](Dockerfile) for the CUDA and the CPU flavour on both
+`linux/amd64` and `linux/arm64` — no separate CPU file to drift out of sync. It defaults
+to a CUDA base:
 
 ```bash
-docker buildx create --use --name mybuilder
+# GPU (default): nvidia/cuda:12.6.3-runtime-ubuntu22.04 + the cu126 torch wheels
+docker build -f docker/Dockerfile -t lst-ai:gpu .
+
+# CPU-only: ~4 GB instead of ~17 GB, and no NVIDIA runtime needed to run it
+docker build -f docker/Dockerfile -t lst-ai:cpu \
+  --build-arg BASE_IMAGE=ubuntu:22.04 \
+  --build-arg TORCH_INDEX=https://download.pytorch.org/whl/cpu .
 ```
 
-#### 3. Start a New Buildx Builder Instance
+Run both commands from the repository root — the build context is the whole repository.
+`TORCH_INDEX` must match the CUDA runtime in `BASE_IMAGE` and the host driver.
 
-This step ensures that the builder instance is started and uses the newly created builder:
+All weights — the LST-AI ensemble, the atlas, HD-BET's five folds and FastSurfer's three
+VINN checkpoints — are baked in at build time, so a built container runs with no network
+access (`docker run --network none` works). `greedy` installs from PyPI on both
+architectures, pinned to one version via `--build-arg GREEDY_VERSION` so the two images
+do not differ in which greedy produced the result.
+
+## Building behind a TLS-inspecting proxy
+
+Many hospital and university networks inspect HTTPS traffic, re-signing it with their own
+root certificate. Your machine trusts it; a fresh Docker container does not, so the build
+fails at the first download with `CERTIFICATE_VERIFY_FAILED: unable to get local issuer
+certificate`. The certificate has to be added manually:
+
+**1. Copy your organisation's root certificate into `docker/certs/`**
+
+That directory ships with the repository, empty. On Debian/Ubuntu hosts the certificate is
+usually already installed locally:
 
 ```bash
-docker buildx use mybuilder
-docker buildx inspect --bootstrap
+cp /usr/local/share/ca-certificates/*.crt docker/certs/
 ```
 
-#### 4. Build and Push the Image
+Otherwise ask your IT department for it. Files must be PEM format
+(they start with `-----BEGIN CERTIFICATE-----`) and end in `.crt`, or they are ignored.
 
-Navigate to the directory where your Dockerfile is located, then build and push the image for both platforms. Replace path/to/dockerfile with the actual path to your Dockerfile if it's not in the current directory:
+**2. Build as usual**
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64/v8 -t jqmcginnis/lst-ai --push --build-arg BUILD_JOBS=8 .
+docker build -f docker/Dockerfile -t lst-ai:gpu .
 ```
-This command will build the image for amd64 and arm64/v8 architectures and push it to Docker Hub under the repository jqmcginnis/lst-ai. It may take several hpurs (!).
 
-#### 5. Verify the Push
+Everything you put in `docker/certs/` is gitignored, so your certificates cannot be
+committed by accident. Do not push an image built this way to a public registry — it
+trusts your organisation's CA.
 
-Navigate to the directory where your Dockerfile is located, then build and push the image for both platforms. Replace path/to/dockerfile with the actual path to your Dockerfile if it's not in the current directory:
+## How releases are built
 
-```bash
-docker buildx build --platform linux/amd64,linux/arm64/v8 -t jqmcginnis/lst-ai --push .
-```
-This command will build the image for amd64 and arm64/v8 architectures and push it to Docker Hub under the repository jqmcginnis/lst-ai. It may take several hours (!).
+CI ([.github/workflows/ci.yml](../.github/workflows/ci.yml)) builds all four
+{cuda, cpu} × {amd64, arm64} variants on native runners for every push and PR, without
+pushing. Releases are pushed by
+[.github/workflows/docker.yml](../.github/workflows/docker.yml): each variant builds on
+its native runner, pushes by digest, and the digests are stitched into one multi-arch
+manifest per flavour. Pre-release tags never move `latest`/`latest-cpu`. The workflow
+needs the `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` repository secrets and skips green
+without them.
