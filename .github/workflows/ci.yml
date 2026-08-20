@@ -117,15 +117,9 @@ jobs:
           file: docker/Dockerfile
           platforms: ${{ matrix.platform }}
           push: false
-          # The Dockerfile defaults arm64 to a prebuilt greedy wheel, since none is
-          # published upstream, and verifies it against docker/greedy-wheels.sha256.
-          # Set the repository variable GREEDY_WHEEL_ARM64 to override it (e.g. once
-          # official wheels exist); an overridden wheel is installed unverified, so add
-          # its digest to that file and drop the variable once it is the one we want.
-          #
           # The CPU flavour is the same Dockerfile with a plain Ubuntu base and the CPU
-          # torch index -- no separate file to drift out of sync.
+          # torch index -- no separate file to drift out of sync. greedy installs from
+          # PyPI on both architectures since picsl-greedy 1.4.0.1.
           build-args: |
-            ${{ vars.GREEDY_WHEEL_ARM64 && format('GREEDY_WHEEL={0}', vars.GREEDY_WHEEL_ARM64) || '' }}
             ${{ matrix.flavour == 'cpu' && 'BASE_IMAGE=ubuntu:22.04' || '' }}
             ${{ matrix.flavour == 'cpu' && 'TORCH_INDEX=https://download.pytorch.org/whl/cpu' || '' }}

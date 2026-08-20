@@ -68,20 +68,10 @@ Either way, the install pulls in `torch`, `picsl-greedy`, `hd-bet` and FastSurfe
 FastSurfer](#lesion-annotation-with-fastsurfer). The model bundle and atlas are
 downloaded automatically on first run. Nothing else has to be set up by hand.
 
-**On linux/arm64**, `picsl-greedy` has no wheel on PyPI (Kitware publishes the VTK
-wheel-SDK for x86_64 only, so greedy has to build VTK from source). Until aarch64 wheels
-are published upstream, install one built out-of-band before `pip install -e .`:
-
-```bash
-WHEEL=picsl_greedy-1.4.0-cp312-cp312-linux_aarch64.whl   # match cp3XX to your Python
-curl -fsSLO https://github.com/jqmcginnis/greedy_python/releases/download/v1.4.0-aarch64.1/$WHEEL
-grep "  $WHEEL$" docker/greedy-wheels.sha256 | sha256sum -c -
-pip install ./$WHEEL
-```
-
-[`docker/greedy-wheels.sha256`](docker/greedy-wheels.sha256) holds the digest of every
-wheel the images install, so you are checking the same bytes the container does rather
-than trusting the download.
+`picsl-greedy` ships official PyPI wheels for linux/arm64 since 1.4.0.1
+([pyushkevich/greedy_python#6](https://github.com/pyushkevich/greedy_python/pull/6)), so
+no platform needs a wheel workaround any more — `pip install -e .` covers every
+supported architecture.
 
 ### What happened to TensorFlow?
 
@@ -221,13 +211,9 @@ docker build -f docker/Dockerfile -t lst-ai:cpu \
 
 Both flavours are built for `linux/amd64` and `linux/arm64` in CI. All weights — the LST-AI
 ensemble, the atlas, HD-BET's five folds and FastSurfer's three VINN checkpoints — are
-baked in at build time, so the container needs no network at run time. On aarch64 the
-build installs `greedy` from a prebuilt wheel, since no official arm64 wheel is
-published yet, and checks it against [`docker/greedy-wheels.sha256`](docker/greedy-wheels.sha256)
-before installing — a wheel that does not hash as expected fails the build. Point it at a
-different one with `--build-arg GREEDY_WHEEL=<url>`, which skips that check since the
-digest would not be one of these. On amd64 greedy comes from PyPI, pinned to the same
-version, and that argument is ignored. 
+baked in at build time, so the container needs no network at run time. `greedy` installs
+from PyPI on both architectures, pinned to one version via `--build-arg GREEDY_VERSION`
+so the two images do not differ in which greedy produced the result.
 
 #### Building behind a TLS-inspecting proxy
 

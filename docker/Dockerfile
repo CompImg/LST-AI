@@ -16,11 +16,8 @@
 # TORCH_INDEX must match the CUDA runtime in BASE_IMAGE and the host driver
 # (cu121/cu124/cu126/cu128...). Running the GPU image also needs `--gpus all`.
 #
-# On linux/arm64 there is no picsl-greedy wheel on PyPI (Kitware publishes the VTK
-# wheel-SDK for x86_64 only, so greedy must compile VTK from source). A prebuilt wheel
-# matching the image's Python version is fetched instead, and checked against the digests
-# in docker/greedy-wheels.sha256. Point --build-arg GREEDY_WHEEL=<url> at a different one
-# to override that (its digest is not checked, since it is not one of these).
+# greedy installs from PyPI on both architectures (picsl-greedy ships linux/aarch64
+# wheels since 1.4.0.1), pinned below via GREEDY_VERSION.
 
 ARG BASE_IMAGE=nvidia/cuda:12.6.3-runtime-ubuntu22.04
 FROM ${BASE_IMAGE}
@@ -62,37 +59,13 @@ ENV PIP_CERT=/etc/ssl/certs/ca-certificates.crt \
 # image's CUDA build; FastSurfer's inference module imports it.
 RUN pip install --index-url ${TORCH_INDEX} torch torchvision
 
-# greedy: PyPI on amd64; on arm64 a prebuilt wheel matching this image's Python version,
-# since none is published upstream. One version for both architectures -- registration is
-# the pipeline's largest source of run-to-run variation, so the two images should at least
-# not differ in which greedy produced the result.
-ARG GREEDY_VERSION=1.4.0
-ARG GREEDY_WHEEL=""
-# STAGING: these wheels are built out-of-band and still served from the fork that built
-# them, the same way LST_AI/utils.py still serves the model bundle from jqmcginnis/LST-AI.
-# Mirror them onto whichever release hosts lst_data.zip and flip both together -- the
-# digests in docker/greedy-wheels.sha256 are what make that mirror verifiable rather than
-# a second thing to trust, since an identical copy hashes identically.
-ARG GREEDY_WHEEL_BASE="https://github.com/jqmcginnis/greedy_python/releases/download/v1.4.0-aarch64.1"
-COPY docker/greedy-wheels.sha256 /tmp/greedy-wheels.sha256
-RUN set -eu; \
-    if [ "$(uname -m)" != "aarch64" ]; then \
-        pip install "picsl-greedy==${GREEDY_VERSION}"; \
-    else \
-        TAG="cp$(python -c 'import sys; print(f"{sys.version_info.major}{sys.version_info.minor}")')"; \
-        WHEEL="picsl_greedy-${GREEDY_VERSION}-$TAG-$TAG-linux_aarch64.whl"; \
-        if [ -n "$GREEDY_WHEEL" ]; then \
-            echo "arm64: installing greedy from the supplied $GREEDY_WHEEL (digest not checked)"; \
-            pip install "$GREEDY_WHEEL"; \
-        else \
-            echo "arm64: installing greedy from $GREEDY_WHEEL_BASE/$WHEEL"; \
-            curl -fsSL -o "/tmp/$WHEEL" "$GREEDY_WHEEL_BASE/$WHEEL"; \
-            cd /tmp && grep "  $WHEEL$" greedy-wheels.sha256 | sha256sum -c -; \
-            pip install "/tmp/$WHEEL"; \
-            rm -f "/tmp/$WHEEL"; \
-        fi; \
-    fi; \
-    rm -f /tmp/greedy-wheels.sha256
+# greedy: official PyPI wheels on both architectures since 1.4.0.1, which is the first
+# release with linux/aarch64 wheels (pyushkevich/greedy_python#6). Pinned to one version
+# for both images -- registration is the pipeline's largest source of run-to-run
+# variation, so the two images should at least not differ in which greedy produced the
+# result.
+ARG GREEDY_VERSION=1.4.0.1
+RUN pip install "picsl-greedy==${GREEDY_VERSION}"
 
 # --- FastSurfer --------------------------------------------------------------------
 #

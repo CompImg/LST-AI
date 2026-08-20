@@ -112,7 +112,9 @@ setup(
         'requests>=2.31.0',
         'torch',
         'h5py>=3.7',
-        'picsl-greedy',
+        # >=1.4.0.1: first release with linux/aarch64 wheels; older versions would fall
+        # back to an sdist build (compiling VTK) on arm64.
+        'picsl-greedy>=1.4.0.1',
         'brainles_hd_bet',
     ] + _fastsurfer.FASTSURFER_REQUIRES,
     extras_require={

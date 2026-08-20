@@ -87,25 +87,14 @@ Two things about the CLI that are easy to get wrong:
 
 ### A1. Install from source
 
-`picsl-greedy` publishes no linux-aarch64 wheel, so greedy comes from a prebuilt wheel.
-Match the tag to your Python version (`cp310`–`cp313`):
+`picsl-greedy` ships official linux/aarch64 wheels since 1.4.0.1, so the install is the
+same as on x86_64:
 
 ```bash
 python3 -m venv lst_env && source lst_env/bin/activate
-python -c "import sys; print(f'cp{sys.version_info.major}{sys.version_info.minor}')"
-
 git clone https://github.com/jqmcginnis/LST-AI.git && cd LST-AI
-
-WHEEL=picsl_greedy-1.4.0-cp312-cp312-linux_aarch64.whl   # cp3XX from the line above
-curl -fsSLO https://github.com/jqmcginnis/greedy_python/releases/download/v1.4.0-aarch64.1/$WHEEL
-grep "  $WHEEL$" docker/greedy-wheels.sha256 | sha256sum -c -   # must print OK
-pip install ./$WHEEL
-
 pip install -e .
 ```
-
-If `sha256sum` does not print `OK`, stop and report it — the images pin the same digests,
-so a mismatch means the wheel is not the one this release was tested with.
 
 ### A2. Run the unit tests
 
