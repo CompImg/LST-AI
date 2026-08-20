@@ -71,7 +71,9 @@ setup(
     # Distribution name lst-ai (what you pip install), import package lst_ai (what you
     # import) -- the PEP 503/PEP 8 pairing.
     name='lst-ai',
-    version='2.0.0',
+    # 2.0.0rc1: release-candidate soak before the final 2.0.0. pip skips pre-releases
+    # unless asked (--pre or an explicit ==), so nobody gets this by accident.
+    version='2.0.0rc1',
     description='Lesion Segmentation Toolbox AI',
     long_description=_README,
     long_description_content_type='text/markdown',

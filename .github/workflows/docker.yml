@@ -81,15 +81,22 @@ jobs:
           pattern: digests-*
           merge-multiple: true
       - name: Create multi-arch manifests
+        # Pre-release tags (anything with rc/a/b/dev in the version part) do NOT move
+        # latest/latest-cpu: a plain `docker pull` must never resolve to a candidate.
+        # Testers pull the rc tag explicitly -- the same opt-in pip gives via --pre.
         run: |
           TAG="${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}"
+          case "$TAG" in
+            *rc*|*a[0-9]*|*b[0-9]*|*dev*) LATEST_CUDA=""; LATEST_CPU="" ;;
+            *) LATEST_CUDA="-t $IMAGE:latest"; LATEST_CPU="-t $IMAGE:latest-cpu" ;;
+          esac
           cd /tmp/digests/cuda
           docker buildx imagetools create \
-            -t "$IMAGE:$TAG" -t "$IMAGE:latest" \
+            -t "$IMAGE:$TAG" $LATEST_CUDA \
             $(printf "$IMAGE@sha256:%s " *)
           cd /tmp/digests/cpu
           docker buildx imagetools create \
-            -t "$IMAGE:$TAG-cpu" -t "$IMAGE:latest-cpu" \
+            -t "$IMAGE:$TAG-cpu" $LATEST_CPU \
             $(printf "$IMAGE@sha256:%s " *)
       - name: Inspect the result
         run: |
