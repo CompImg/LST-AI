@@ -47,8 +47,15 @@ wheel-SDK for x86_64 only, so greedy has to build VTK from source). Until aarch6
 are published upstream, install one built out-of-band before `pip install -e .`:
 
 ```bash
-pip install https://github.com/jqmcginnis/greedy_python/releases/download/<tag>/picsl_greedy-<...>-linux_aarch64.whl
+WHEEL=picsl_greedy-1.4.0-cp312-cp312-linux_aarch64.whl   # match cp3XX to your Python
+curl -fsSLO https://github.com/jqmcginnis/greedy_python/releases/download/v1.4.0-aarch64.1/$WHEEL
+grep "  $WHEEL$" docker/greedy-wheels.sha256 | sha256sum -c -
+pip install ./$WHEEL
 ```
+
+[`docker/greedy-wheels.sha256`](docker/greedy-wheels.sha256) holds the digest of every
+wheel the images install, so you are checking the same bytes the container does rather
+than trusting the download.
 
 ### What happened to TensorFlow?
 
@@ -190,8 +197,11 @@ Both flavours are built for `linux/amd64` and `linux/arm64` in CI. All weights �
 ensemble, the atlas, HD-BET's five folds and FastSurfer's three VINN checkpoints — are
 baked in at build time, so the container needs no network at run time. On aarch64 the
 build installs `greedy` from a prebuilt wheel, since no official arm64 wheel is
-published yet; point it at a different one with `--build-arg GREEDY_WHEEL=<url>`.
-On amd64 greedy comes from PyPI and that argument is ignored. 
+published yet, and checks it against [`docker/greedy-wheels.sha256`](docker/greedy-wheels.sha256)
+before installing — a wheel that does not hash as expected fails the build. Point it at a
+different one with `--build-arg GREEDY_WHEEL=<url>`, which skips that check since the
+digest would not be one of these. On amd64 greedy comes from PyPI, pinned to the same
+version, and that argument is ignored. 
 
 #### Building behind a TLS-inspecting proxy
 
