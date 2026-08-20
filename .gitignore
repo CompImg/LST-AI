@@ -11,8 +11,8 @@ dist/
 venv/
 
 # Local model/atlas bundles fetched at runtime (shipped via the release zip)
-LST_AI/model/
-LST_AI/atlas/
+lst_ai/model/
+lst_ai/atlas/
 lst_data.zip
 lst_data/
 lst_data.zip

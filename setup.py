@@ -13,7 +13,7 @@ _README = (_HERE / 'README.md').read_text(encoding='utf-8')
 
 
 def _load_fastsurfer_module():
-    """Load LST_AI/fastsurfer.py by path, rather than by `import LST_AI.fastsurfer`.
+    """Load lst_ai/fastsurfer.py by path, rather than by `import lst_ai.fastsurfer`.
 
     setup.py runs before the package is installed, and cannot count on the source tree
     being importable: PEP 517 backends execute it from a directory of their own choosing.
@@ -22,7 +22,7 @@ def _load_fastsurfer_module():
     installed yet.
     """
     spec = importlib.util.spec_from_file_location(
-        '_lst_ai_fastsurfer', _HERE / 'LST_AI' / 'fastsurfer.py')
+        '_lst_ai_fastsurfer', _HERE / 'lst_ai' / 'fastsurfer.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -38,13 +38,13 @@ class BuildPyWithFastSurfer(build_py):
     except --segment_only, so FastSurfer belongs with greedy and HD-BET rather than in a
     list of manual follow-up steps. Its Python dependencies are ordinary wheels and ride
     along in install_requires below; only the source tree has to be fetched here, since
-    FastSurfer is not published on PyPI (see LST_AI/fastsurfer.py for the full reasoning,
+    FastSurfer is not published on PyPI (see lst_ai/fastsurfer.py for the full reasoning,
     including why its own metadata cannot be used).
 
     build_py is the hook that runs for `pip install .` *and* `pip install -e .`, on both
     architectures; `install` would be skipped by every wheel-based install. The tree is
     written outside the build directory, so it is never baked into the wheel -- a wheel
-    built here stays a normal small wheel, and LST_AI.fastsurfer.ensure_fastsurfer()
+    built here stays a normal small wheel, and lst_ai.fastsurfer.ensure_fastsurfer()
     fetches on first use for whoever installs it.
     """
 
@@ -68,23 +68,23 @@ class BuildPyWithFastSurfer(build_py):
         super().run()
 
 setup(
-    name='LST_AI',
+    # Distribution name lst-ai (what you pip install), import package lst_ai (what you
+    # import) -- the PEP 503/PEP 8 pairing.
+    name='lst-ai',
     version='2.0.0',
     description='Lesion Segmentation Toolbox AI',
     long_description=_README,
     long_description_content_type='text/markdown',
     url='https://github.com/CompImg/LST-AI',
     author='LST-AI Team',
-    author_email=[
-        'julian.mcginnis@tum.de',
-        'tun.wiltgen@tum.de',
-        'mark.muehlau@tum.de',
-        'benedict.wiestler@tum.de'
-    ],
+    # A single RFC-822 style string -- a Python list here serializes as its repr and
+    # renders garbage on the PyPI page.
+    author_email=('julian.mcginnis@tum.de, tun.wiltgen@tum.de, '
+                  'mark.muehlau@tum.de, b.wiestler@tum.de'),
     keywords=['lesion_segmentation', 'ms', 'lst', 'ai'],
     # Pip-only stack, PyTorch throughout (no TensorFlow, no ONNX Runtime, no onnx,
     # no onnx2torch, no compiled greedy, no git HD-BET):
-    #   - inference: native PyTorch (LST_AI/model.py). Since v2.0.0 the released
+    #   - inference: native PyTorch (lst_ai/model.py). Since v2.0.0 the released
     #     weights ship as .pt, so nothing outside torch is needed to read them.
     #     Running under torch rather than ONNX Runtime also bounds GPU memory: the
     #     ORT CUDA arena transiently grabbed ~40 GB at session init and OOM'd when
@@ -119,12 +119,12 @@ setup(
     ] + _fastsurfer.FASTSURFER_REQUIRES,
     extras_require={
         # Only for reading a legacy v1.3.0 .onnx bundle, or re-running the .onnx -> .pt
-        # export in LST_AI/weights.py. Not needed to run inference.
+        # export in lst_ai/weights.py. Not needed to run inference.
         'onnx': ['onnx'],
     },
-    scripts=['LST_AI/lst'],
+    scripts=['lst_ai/lst'],
     license='MIT',
-    packages=find_packages(include=['LST_AI']),
+    packages=find_packages(include=['lst_ai']),
     cmdclass={'build_py': BuildPyWithFastSurfer},
     classifiers=[
         'Intended Audience :: Science/Research',

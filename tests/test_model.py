@@ -13,7 +13,7 @@ import pytest
 import torch
 import torch.nn as nn
 
-from LST_AI.model import LEAKY_SLOPE, NORM_EPS, SHIPPED_VARIANTS, NNUNet3D
+from lst_ai.model import LEAKY_SLOPE, NORM_EPS, SHIPPED_VARIANTS, NNUNet3D
 
 SMALL = dict(n_conv_blocks=3, n_filters=4)
 SIZE = 32
@@ -116,7 +116,7 @@ def test_gradients_reach_every_parameter():
 @pytest.mark.parametrize("variant", sorted(SHIPPED_VARIANTS))
 def test_weights_load_bitwise_from_the_released_graph(variant: str):
     """Every kernel, gamma and beta must equal its ONNX initializer exactly."""
-    from LST_AI.weights import convert_variant, extract_onnx_params, ordered_units
+    from lst_ai.weights import convert_variant, extract_onnx_params, ordered_units
 
     if not _onnx(variant).exists():
         pytest.skip(f"{_onnx(variant)} not present")
@@ -135,13 +135,13 @@ def test_weights_load_bitwise_from_the_released_graph(variant: str):
 def test_exported_checkpoint_is_a_bit_exact_substitute_for_the_graph(variant: str, tmp_path):
     """Guards the v2.0.0 bundle: .pt must be indistinguishable from the .onnx it came from.
 
-    The release ships checkpoints exported by ``python -m LST_AI.weights``, so this runs
+    The release ships checkpoints exported by ``python -m lst_ai.weights``, so this runs
     that exporter and holds the result to exact equality -- tensors *and* a forward pass.
     A tolerance would be the wrong test here: nothing in the export is allowed to be
     approximate, and if the tensors match then segmentation output matches by
     construction, whatever the subject.
     """
-    from LST_AI.weights import convert_variant, main as export_main
+    from lst_ai.weights import convert_variant, main as export_main
 
     if not _onnx(variant).exists():
         pytest.skip(f"{_onnx(variant)} not present")

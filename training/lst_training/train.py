@@ -30,7 +30,7 @@ from torch.utils.data import DataLoader
 
 from .data import MSDataset, collate
 from .losses import DS_WEIGHTS, LOSSES, TRAINING_PRESETS, DeepSupervisionLoss, dice_binary
-from LST_AI.model import NNUNet3D
+from lst_ai.model import NNUNet3D
 
 __all__ = ["train", "build_argparser"]
 

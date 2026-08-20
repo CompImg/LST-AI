@@ -23,7 +23,7 @@ would fail loudly rather than silently load transposed weights.
 
 This is how the ``.pt`` ensemble shipped in the v2.0.0 release was produced::
 
-    python -m LST_AI.weights --onnx-dir lst_data/model --out-dir checkpoints
+    python -m lst_ai.weights --onnx-dir lst_data/model --out-dir checkpoints
 
 The checkpoints hold nothing but tensors and plain ints, so they load under
 ``torch.load(..., weights_only=True)`` -- a downloaded artefact must not be able to
@@ -40,7 +40,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from LST_AI.model import NNUNet3D, SHIPPED_VARIANTS
+from lst_ai.model import NNUNet3D, SHIPPED_VARIANTS
 
 __all__ = ["ordered_units", "extract_onnx_params", "load_onnx_weights"]
 
@@ -88,7 +88,7 @@ def extract_onnx_params(onnx_path: str | os.PathLike) -> tuple[list[dict], list[
     except ImportError as exc:   # pragma: no cover - exercised only without the extra
         raise ImportError(
             f"reading {onnx_path} needs the optional 'onnx' package "
-            "(pip install 'LST_AI[onnx]'). The v2.0.0 release ships .pt checkpoints, "
+            "(pip install 'lst_ai[onnx]'). The v2.0.0 release ships .pt checkpoints, "
             "which load without it -- re-run download_data() to fetch them."
         ) from exc
 

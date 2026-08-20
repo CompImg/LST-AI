@@ -40,7 +40,7 @@ DATA_RELEASE = "v2.0.0"
 # Contents of lst_data.zip at DATA_RELEASE: the PyTorch ensemble
 # (UNet3D_MS_final_mdl{A,B,C}.pt) plus the MNI atlas. No compiled 'binaries' -- greedy is
 # the picsl-greedy pip package now. The .pt were exported from the ONNX graphs by
-# `python -m LST_AI.weights` and are tensor-for-tensor identical to them; those graphs
+# `python -m lst_ai.weights` and are tensor-for-tensor identical to them; those graphs
 # stay downloadable as lst_data_onnx.zip on the same release for provenance, though
 # nothing in this package needs them. See docs/pytorch-reimplementation.md.
 DATA_URL = f"https://github.com/{DATA_REPO}/releases/download/{DATA_RELEASE}/lst_data.zip"
@@ -50,7 +50,35 @@ DATA_URL = f"https://github.com/{DATA_REPO}/releases/download/{DATA_RELEASE}/lst
 # into .../bin, a directory that has nothing to do with the package and that a non-root
 # user cannot write to. Resolving from the package instead keeps the download target and
 # the read location the same in every install, and lets a container bake the bundle in.
-DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+#
+# The package directory is not always writable, though: a system-wide install (sudo pip,
+# a managed site-packages) leaves a non-root user unable to download the bundle on first
+# run. resolve_data_dir() therefore falls back to the user cache directory in that case,
+# and LST_AI_DATA_DIR overrides the choice entirely.
+_PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def resolve_data_dir(package_dir=_PACKAGE_DIR, environ=os.environ):
+    """Pick the directory the model bundle lives in.
+
+    In order: the LST_AI_DATA_DIR environment variable if set; the package directory
+    when the bundle is already there (baked-in Docker images, existing installs) or when
+    it is writable (venv installs); otherwise the user cache directory
+    ($XDG_CACHE_HOME/lst_ai or ~/.cache/lst_ai), for installs whose site-packages the
+    user cannot write to.
+    """
+    override = environ.get("LST_AI_DATA_DIR")
+    if override:
+        return os.path.abspath(os.path.expanduser(override))
+    if all(os.path.isdir(os.path.join(package_dir, d)) for d in ("atlas", "model")):
+        return package_dir
+    if os.access(package_dir, os.W_OK):
+        return package_dir
+    cache_root = environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache")
+    return os.path.join(cache_root, "lst_ai")
+
+
+DATA_DIR = resolve_data_dir()
 
 
 def download_data(path=DATA_DIR):
@@ -59,8 +87,11 @@ def download_data(path=DATA_DIR):
     """
     url = DATA_URL
 
-    target_path = "lst_data.zip"
     extract_path = path  # This is the base directory.
+    os.makedirs(extract_path, exist_ok=True)
+    # The zip lands in the directory it will be extracted to, not the current working
+    # directory, which may be read-only or shared.
+    target_path = os.path.join(extract_path, "lst_data.zip")
 
     atlas_path = os.path.join(extract_path, 'atlas')
     model_path = os.path.join(extract_path, 'model')

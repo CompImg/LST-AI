@@ -37,7 +37,7 @@ jobs:
       - name: Import the package without the heavy extras
         # picsl-greedy and hd-bet are not needed to construct or exercise the network,
         # so this stays fast and catches import-level breakage early.
-        run: python -c "from LST_AI.model import NNUNet3D, SHIPPED_VARIANTS; print(sorted(SHIPPED_VARIANTS))"
+        run: python -c "from lst_ai.model import NNUNet3D, SHIPPED_VARIANTS; print(sorted(SHIPPED_VARIANTS))"
       - name: Architecture tests
         run: pytest tests -q -m "not needs_weights"
       - name: Training-side tests (dataset, losses, trainer)

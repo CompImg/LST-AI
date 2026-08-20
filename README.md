@@ -68,6 +68,11 @@ Either way, the install pulls in `torch`, `picsl-greedy`, `hd-bet` and FastSurfe
 FastSurfer](#lesion-annotation-with-fastsurfer). The model bundle and atlas are
 downloaded automatically on first run. Nothing else has to be set up by hand.
 
+The bundle lands next to the installed `lst_ai` package when that directory is
+writable (any venv install), and falls back to `~/.cache/lst_ai` when it is not
+(e.g. a system-wide install). Set `LST_AI_DATA_DIR` to override the location
+explicitly.
+
 `picsl-greedy` ships official PyPI wheels for linux/arm64 since 1.4.0.1
 ([pyushkevich/greedy_python#6](https://github.com/pyushkevich/greedy_python/pull/6)), so
 no platform needs a wheel workaround any more — `pip install -e .` covers every
@@ -126,16 +131,16 @@ first run that annotates, the same way LST-AI fetches its own model bundle.
 `FASTSURFER_HOME` points at, or a `run_fastsurfer.sh` on `PATH` — is ignored, and there is
 no option to prefer it, so an annotation never depends on what a given machine happens to
 have lying around. The version is pinned in
-[LST_AI/fastsurfer.py](LST_AI/fastsurfer.py).
+[lst_ai/fastsurfer.py](lst_ai/fastsurfer.py).
 
 Two things you can still do by hand:
 
 ```bash
 # fetch the checkpoints ahead of time, for a machine that will later be offline
-python -m LST_AI.fastsurfer --checkpoints
+python -m lst_ai.fastsurfer --checkpoints
 
 # re-download the tree, if it was interrupted or something under it was edited
-python -m LST_AI.fastsurfer --force
+python -m lst_ai.fastsurfer --force
 ```
 
 Setting `LST_AI_SKIP_FASTSURFER=1` before `pip install` skips the download at install
@@ -146,7 +151,7 @@ still works, and the download is retried on first use.
 ### Training your own models
 
 `training/` trains the same network this package runs at inference — single-channel
-(FLAIR) or dual-channel (FLAIR + T1). It imports `LST_AI.model` rather than copying it, so
+(FLAIR) or dual-channel (FLAIR + T1). It imports `lst_ai.model` rather than copying it, so
 what you train is what ships. See [training/README.md](training/README.md).
 
 ### Usage of LST-AI

@@ -1,6 +1,6 @@
 # Training LST-AI models
 
-Trains the same network `LST_AI` runs at inference — `LST_AI.model.NNUNet3D` is imported,
+Trains the same network `lst_ai` runs at inference — `lst_ai.model.NNUNet3D` is imported,
 not copied, so what you train is by construction what ships. That matters: the released
 ensemble is *heterogeneous* (mdlA 28 filters, mdlB 24 with a single deep-supervision head,
 mdlC 32), which is what happens when training and inference drift apart in separate places.
@@ -17,7 +17,7 @@ against them rather than by inspection:
 ## Install
 
 ```bash
-pip install -e .                 # LST_AI itself, from the repository root
+pip install -e .                 # lst_ai itself, from the repository root
 pip install -e training          # or just: pip install torch nibabel scipy scikit-image
 ```
 
@@ -32,7 +32,7 @@ One directory per subject, discovered by globbing for FLAIR:
 ```
 
 Volumes must be skull-stripped and in MNI space — background is taken to be exactly zero,
-and the brain mask is derived as `flair != 0`. Use `LST_AI`'s own registration and
+and the brain mask is derived as `flair != 0`. Use `lst_ai`'s own registration and
 stripping to prepare a cohort, then train on the MNI-space intermediates it leaves in
 `--temp`.
 
@@ -82,7 +82,7 @@ block to its bias. `check_input_shape` rejects both cases with an explanatory er
 ## Numerics: legacy vs modern
 
 The released weights were trained under TensorFlow defaults that are **not** PyTorch's, and
-`LST_AI.model` pins them so the shipped weights load correctly: LeakyReLU slope **0.3**
+`lst_ai.model` pins them so the shipped weights load correctly: LeakyReLU slope **0.3**
 (torch: 0.01), instance-norm epsilon **1e-3** (torch: 1e-5), affine instance norm, no conv
 bias, he_uniform init, and `K.epsilon()` = 1e-7 Dice smoothing.
 

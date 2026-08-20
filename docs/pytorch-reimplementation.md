@@ -15,14 +15,14 @@ serves both the released weights and anything trained next.
 
 | | before | after |
 |---|---|---|
-| inference | TensorFlow / ONNX Runtime | native PyTorch (`LST_AI/model.py`) |
+| inference | TensorFlow / ONNX Runtime | native PyTorch (`lst_ai/model.py`) |
 | weights | `.h5` / `.onnx` | same tensors, reserialised as `.pt` |
 | registration | greedy | greedy (unchanged) |
 | skull stripping | HD-BET | HD-BET (unchanged, already PyTorch) |
 | pre/post-processing | — | unchanged |
 
 `onnx` is no longer a dependency at all. It survives as an optional extra
-(`pip install 'LST_AI[onnx]'`) for two things only: reading a legacy `.onnx` bundle, and
+(`pip install 'lst_ai[onnx]'`) for two things only: reading a legacy `.onnx` bundle, and
 re-running the export that produced the shipped `.pt`. `--backend` is gone from the CLI.
 
 ## The weights are the released ones
@@ -38,7 +38,7 @@ The chain is `.h5` → `.onnx` → `.pt`, and every link is exact:
 
 1. `.h5` → `.onnx` by tf2onnx (`scripts/tf_to_onnx.py`). Published as `lst_data_onnx.zip`
    on the v2.0.0 release; sha256 `b17147e9…0fa018`, unchanged since v1.3.0.
-2. `.onnx` → `.pt` by `python -m LST_AI.weights --onnx-dir … --out-dir …`, which copies
+2. `.onnx` → `.pt` by `python -m lst_ai.weights --onnx-dir … --out-dir …`, which copies
    initializers into the module without arithmetic.
 
 Step 2 is re-run in CI on every push and held to exact equality — all 304 state-dict

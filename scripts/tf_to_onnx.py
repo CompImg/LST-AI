@@ -1,13 +1,13 @@
 """Convert the LST-AI TF/Keras UNet3D ensemble (.h5) to ONNX (TF venv only).
 
 The models use GroupNormalization (an instance-norm replacement for the deprecated
-tfa InstanceNormalization, see LST_AI/custom_tf.py) — all standard ops, so tf2onnx
+tfa InstanceNormalization, see lst_ai/custom_tf.py) — all standard ops, so tf2onnx
 converts them cleanly. This script ALSO saves a reference input and each model's TF
 out_seg (output index 0) so equivalence can be checked from a separate onnxruntime
 venv (avoids numpy/ABI conflicts between TF and onnxruntime).
 
 The reference input defaults to a REAL MNI brain volume (--input-nifti), preprocessed
-exactly like LST_AI/segment.py (center crop/pad to 192^3 + intensity standardization),
+exactly like lst_ai/segment.py (center crop/pad to 192^3 + intensity standardization),
 which is in-distribution for the instance-norm UNets — far fairer than random noise.
 
 Run in the TF venv (tensorflow<2.16 + tf2onnx + onnx + nibabel; NO onnxruntime), then
@@ -26,7 +26,7 @@ import numpy as np
 import tensorflow as tf
 import tf2onnx
 
-from LST_AI.custom_tf import load_custom_model
+from lst_ai.custom_tf import load_custom_model
 
 _MODELS = ["UNet3D_MS_final_mdlA.h5", "UNet3D_MS_final_mdlB.h5", "UNet3D_MS_final_mdlC.h5"]
 _SHAPE = (192, 192, 192)

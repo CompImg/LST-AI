@@ -112,7 +112,7 @@ class NNUNet3D(nn.Module):
     ----------
     in_channels : int
         1 for a FLAIR-only model, 2 for the dual-channel [FLAIR, T1] model. Channel order
-        is ``[flair, t1]``, matching ``LST_AI/segment.py``.
+        is ``[flair, t1]``, matching ``lst_ai/segment.py``.
     n_conv_blocks : int
         Number of encoder resolution levels (excluding the bottleneck).
     n_filters : int

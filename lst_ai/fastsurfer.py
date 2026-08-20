@@ -1,7 +1,7 @@
 """Install, and later find, the FastSurfer tree LST-AI annotates lesions with.
 
 Every mode except ``--segment_only`` assigns lesions to anatomical regions from a
-FastSurfer segmentation of the T1 (LST_AI/annotate.py shells out to
+FastSurfer segmentation of the T1 (lst_ai/annotate.py shells out to
 ``run_fastsurfer.sh``), so FastSurfer is a hard requirement of a normal run rather than
 an opt-in extra. ``setup.py`` therefore fetches it at install time, next to greedy and
 HD-BET; this module is both the code that does the fetching and the lookup that finds
@@ -31,9 +31,9 @@ switch to prefer it; see :func:`find_fastsurfer`.
 
 The VINN checkpoints (~65 MB) are not fetched here. FastSurfer downloads any it is
 missing on its first segmentation, which is the same "fetch on first use" behaviour as
-LST-AI's own model bundle (LST_AI/utils.py). Pre-fetch them for an offline machine with::
+LST-AI's own model bundle (lst_ai/utils.py). Pre-fetch them for an offline machine with::
 
-    python -m LST_AI.fastsurfer --checkpoints
+    python -m lst_ai.fastsurfer --checkpoints
 """
 
 from __future__ import annotations
@@ -115,7 +115,7 @@ def find_fastsurfer():
     on ``PATH`` -- is deliberately *not* picked up, and there is no way to point LST-AI at
     one. Annotation is part of LST-AI's output, so which FastSurfer produced it cannot
     depend on what a given machine has lying around: the pinned version below is the one
-    the label mapping and the flags in LST_AI/annotate.py were written against, and the
+    the label mapping and the flags in lst_ai/annotate.py were written against, and the
     only one whose results are comparable across users.
     """
     for candidate in _managed_dirs():
@@ -209,7 +209,7 @@ def ensure_fastsurfer():
         raise RuntimeError(
             f'FastSurfer {FASTSURFER_REF} is needed to annotate lesions but is not '
             f'installed, and fetching it failed: {exc}\n'
-            f'Install it with `python -m LST_AI.fastsurfer` once the machine can reach '
+            f'Install it with `python -m lst_ai.fastsurfer` once the machine can reach '
             f'GitHub, or run with --segment_only, which does not annotate.'
         ) from exc
 

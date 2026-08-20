@@ -70,12 +70,12 @@ RUN pip install "picsl-greedy==${GREEDY_VERSION}"
 # --- FastSurfer --------------------------------------------------------------------
 #
 # `lst` annotates lesions by anatomical region in every mode except --segment_only, and
-# that annotation *is* a FastSurfer segmentation of the T1 (LST_AI/annotate.py shells
+# that annotation *is* a FastSurfer segmentation of the T1 (lst_ai/annotate.py shells
 # out to run_fastsurfer.sh). It is therefore part of the standard image on both
 # architectures, not an opt-in extra -- without it the default invocation fails halfway
 # through, after the segmentation has already been computed.
 #
-# Installed through LST-AI's own installer, LST_AI/fastsurfer.py, rather than cloned to a
+# Installed through LST-AI's own installer, lst_ai/fastsurfer.py, rather than cloned to a
 # path of this image's choosing: that module is where the version is pinned and where the
 # tree's location is decided, and it is the only place LST-AI looks. A hand-placed copy
 # plus FASTSURFER_HOME would simply be ignored at run time.
@@ -93,7 +93,7 @@ RUN pip install "picsl-greedy==${GREEDY_VERSION}"
 #     would quietly swap the arm64 GPU image's torch for a CPU build;
 #   * it pulls meshpy, published as an x86_64-only wheel (an sdist needing a C++
 #     toolchain everywhere else), for the corpus-callosum module --no_cc turns off.
-# When bumping the pin in LST_AI/fastsurfer.py, diff this against upstream's
+# When bumping the pin in lst_ai/fastsurfer.py, diff this against upstream's
 # pyproject.toml `dependencies`, and move that module's FASTSURFER_REQUIRES with it --
 # that is the same list, for pip installs. It is repeated here rather than imported so
 # this layer stays independent of the source tree; the import check below is what turns a
@@ -126,7 +126,7 @@ RUN pip install \
 # does not carry, and exits 1 without one; and `-o BUILD.info` writes the very file
 # version.py reads as its build cache, truncating it before the read and failing to parse
 # the empty result -- hence writing elsewhere and moving it into place.
-COPY LST_AI/fastsurfer.py /tmp/lst_ai_fastsurfer.py
+COPY lst_ai/fastsurfer.py /tmp/lst_ai_fastsurfer.py
 RUN python /tmp/lst_ai_fastsurfer.py --checkpoints \
  && FASTSURFER_HOME="$(python /tmp/lst_ai_fastsurfer.py | sed -n 's/^FASTSURFER_HOME=//p')" \
  && export PYTHONPATH="$FASTSURFER_HOME" \
@@ -147,7 +147,7 @@ print('FastSurfer VINN checkpoints:', sorted(p.name for p in ckpts))" \
 
 WORKDIR /opt/lst-ai
 COPY . .
-# setup.py installs FastSurfer itself when it is missing (LST_AI/fastsurfer.py), which is
+# setup.py installs FastSurfer itself when it is missing (lst_ai/fastsurfer.py), which is
 # what makes a plain `pip install` a complete one. Here it is a no-op: the stage above
 # already put it where this same module looks for it. Splitting the two is deliberate --
 # letting this layer do the work instead would re-download FastSurfer whenever the
@@ -156,15 +156,15 @@ RUN pip install .
 
 # --- weights, fetched at build time so the container needs no network -------------
 
-# LST-AI ensemble + atlas, into LST_AI.utils.DATA_DIR -- the same constant the CLI reads
+# LST-AI ensemble + atlas, into lst_ai.utils.DATA_DIR -- the same constant the CLI reads
 # them back from, so the two cannot drift apart.
 #
 # Run from / and not from WORKDIR: `python -c` puts the cwd first on sys.path, so under
-# /opt/lst-ai `import LST_AI` would bind to the copied sources rather than the installed
+# /opt/lst-ai `import lst_ai` would bind to the copied sources rather than the installed
 # package and bake ~400 MB into a directory nothing ever reads. The assert below pins
 # that down, since the failure is invisible -- the image looks fine and simply
 # re-downloads the bundle on every single run.
-RUN cd / && python -c "import os; from LST_AI.utils import DATA_DIR, download_data; \
+RUN cd / && python -c "import os; from lst_ai.utils import DATA_DIR, download_data; \
 assert not DATA_DIR.startswith('/opt/lst-ai'), f'baked into the sources, not the install: {DATA_DIR}'; \
 download_data(path=DATA_DIR); \
 assert os.path.isdir(os.path.join(DATA_DIR, 'model')), 'model directory missing'; \

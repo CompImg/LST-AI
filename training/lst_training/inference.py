@@ -1,10 +1,10 @@
 """Ensemble segmentation in native PyTorch -- no TensorFlow, onnxruntime or onnx2torch.
 
-Mirrors ``LST_AI/segment.py``: centre-crop to the model's input size, preprocess each
+Mirrors ``lst_ai/segment.py``: centre-crop to the model's input size, preprocess each
 modality, run every ensemble member, average the probabilities, threshold at 0.5, drop
 objects below ``--min-lesion-size``, and zero-pad the result back onto the input grid.
 
-    # official v1.3.0 weights, converted once with LST_AI.weights
+    # official v1.3.0 weights, converted once with lst_ai.weights
     python -m lst_training.inference --flair f.nii.gz --t1 t1.nii.gz \\
         --checkpoints checkpoints/UNet3D_MS_final_mdl{A,B,C}.pt --output seg.nii.gz
 
@@ -41,7 +41,7 @@ import nibabel as nib
 import numpy as np
 import torch
 
-from LST_AI.model import NNUNet3D
+from lst_ai.model import NNUNet3D
 
 __all__ = ["load_checkpoint", "adapt_shape", "preprocess", "segment", "remove_small_objects"]
 
@@ -55,7 +55,7 @@ def load_checkpoint(path: str | Path, device: torch.device | str = "cpu") -> NNU
     if "config" not in ckpt or "state_dict" not in ckpt:
         raise ValueError(
             f"{path} is not an LST-AI training checkpoint (expected 'config' and 'state_dict'). "
-            "Convert a released .onnx with `python -m LST_AI.weights` first."
+            "Convert a released .onnx with `python -m lst_ai.weights` first."
         )
     cfg = dict(ckpt["config"])
     cfg["ds_layers"] = tuple(cfg.get("ds_layers", ()))

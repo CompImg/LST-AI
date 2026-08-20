@@ -1,10 +1,11 @@
 import os
+import stat
 import tempfile
 
 import nibabel as nib
 import numpy as np
 
-from LST_AI.utils import harmonize_affines
+from lst_ai.utils import harmonize_affines, resolve_data_dir
 
 
 def _write(path, qform, sform):
@@ -48,3 +49,38 @@ def test_harmonize_affines_noop_when_consistent():
         assert np.allclose(out.affine, affine)
         assert np.allclose(out.get_qform(), out.get_sform())
         assert np.allclose(out.get_fdata(), nib.load(src).get_fdata())
+
+
+def test_resolve_data_dir_env_override_wins():
+    with tempfile.TemporaryDirectory() as d:
+        assert resolve_data_dir(package_dir=d, environ={"LST_AI_DATA_DIR": "/opt/lst"}) == "/opt/lst"
+
+
+def test_resolve_data_dir_prefers_existing_bundle():
+    # A read-only package dir that already holds the bundle (a baked Docker image)
+    # must still be chosen: presence beats writability.
+    with tempfile.TemporaryDirectory() as d:
+        os.mkdir(os.path.join(d, "atlas"))
+        os.mkdir(os.path.join(d, "model"))
+        os.chmod(d, stat.S_IRUSR | stat.S_IXUSR)
+        try:
+            assert resolve_data_dir(package_dir=d, environ={}) == d
+        finally:
+            os.chmod(d, stat.S_IRWXU)
+
+
+def test_resolve_data_dir_uses_writable_package_dir():
+    with tempfile.TemporaryDirectory() as d:
+        assert resolve_data_dir(package_dir=d, environ={}) == d
+
+
+def test_resolve_data_dir_falls_back_to_cache_when_unwritable():
+    with tempfile.TemporaryDirectory() as d:
+        pkg = os.path.join(d, "site-packages")
+        os.mkdir(pkg)
+        os.chmod(pkg, stat.S_IRUSR | stat.S_IXUSR)
+        try:
+            got = resolve_data_dir(package_dir=pkg, environ={"XDG_CACHE_HOME": os.path.join(d, "cache")})
+            assert got == os.path.join(d, "cache", "lst_ai")
+        finally:
+            os.chmod(pkg, stat.S_IRWXU)

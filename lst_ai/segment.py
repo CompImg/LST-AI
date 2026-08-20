@@ -67,8 +67,8 @@ def _make_inference(model_path, device):
     exactly (Dice 1.000000, zero voxels differing).
     """
     import torch
-    from LST_AI.model import NNUNet3D
-    from LST_AI.weights import load_onnx_weights
+    from lst_ai.model import NNUNet3D
+    from lst_ai.weights import load_onnx_weights
 
     torch_device = torch.device('cpu' if str(device) == 'cpu' else f'cuda:{device}')
     models = {}
@@ -92,7 +92,7 @@ def _make_inference(model_path, device):
             raise FileNotFoundError(
                 f"no weights for {stem} in {model_path}: expected {stem}.pt (the current "
                 f"bundle) or {stem}.onnx (a legacy one). Run "
-                "LST_AI.utils.download_data() to fetch them."
+                "lst_ai.utils.download_data() to fetch them."
             )
         return mdl.to(torch_device).eval()
 

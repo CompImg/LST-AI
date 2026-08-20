@@ -15,12 +15,12 @@ import tempfile
 import shutil
 import argparse
 
-from LST_AI.strip import run_hdbet, apply_mask
-from LST_AI.register import mni_registration, rigid_reg, apply_warp_label, apply_warp_interp
-from LST_AI.segment import unet_segmentation
-from LST_AI.annotate import annotate_lesions
-from LST_AI.stats import compute_stats
-from LST_AI.utils import DATA_DIR, download_data, harmonize_affines
+from lst_ai.strip import run_hdbet, apply_mask
+from lst_ai.register import mni_registration, rigid_reg, apply_warp_label, apply_warp_interp
+from lst_ai.segment import unet_segmentation
+from lst_ai.annotate import annotate_lesions
+from lst_ai.stats import compute_stats
+from lst_ai.utils import DATA_DIR, download_data, harmonize_affines
 
 if __name__ == "__main__":
 

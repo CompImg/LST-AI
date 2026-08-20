@@ -25,7 +25,7 @@ import numpy as np
 from skimage.measure import label
 from skimage.morphology import dilation
 
-from LST_AI.fastsurfer import ensure_fastsurfer
+from lst_ai.fastsurfer import ensure_fastsurfer
 
 # FastSurfer/FreeSurfer aseg structure_label -> class_label mapping
 # class_label key: 2=juxtacortical, 3=subcortical, 4=periventricular, 5=infratentorial
@@ -93,7 +93,7 @@ def get_fastsurfer(im_path, seg_path, device):
 
     # LST-AI's --device is a bare GPU id ('0') or 'cpu'; FastSurfer names devices the way
     # torch does, where a bare id is not a device at all ('0' raises "Invalid device
-    # string"). Translate, as LST_AI/segment.py does, and pass a torch-style string
+    # string"). Translate, as lst_ai/segment.py does, and pass a torch-style string
     # through untouched.
     dev = str(device).strip().lower()
     fs_device = dev if dev in ('cpu', 'mps', 'auto') or dev.startswith('cuda') else f'cuda:{dev}'
