@@ -20,7 +20,7 @@ from LST_AI.register import mni_registration, rigid_reg, apply_warp_label, apply
 from LST_AI.segment import unet_segmentation
 from LST_AI.annotate import annotate_lesions
 from LST_AI.stats import compute_stats
-from LST_AI.utils import DATA_DIR, download_data
+from LST_AI.utils import DATA_DIR, download_data, harmonize_affines
 
 if __name__ == "__main__":
 
@@ -148,6 +148,25 @@ if __name__ == "__main__":
         # make temp directory in case it does not exist
         if not os.path.exists(work_dir):
             os.makedirs(work_dir)
+
+    # Harmonize the qform and sform of the inputs before anything reads them.
+    # nibabel (used throughout this pipeline) prefers the sform, while greedy
+    # reads the qform; if a prior co-registration updated only the sform, the two
+    # disagree and the segmentation is mislocated. See CompImg/LST-AI#44. The
+    # originals are left untouched; the pipeline continues on work-dir copies.
+    harmonized_t1 = os.path.join(work_dir, 'input_T1w.nii.gz')
+    harmonized_flair = os.path.join(work_dir, 'input_FLAIR.nii.gz')
+    harmonize_affines(args.t1, harmonized_t1)
+    harmonize_affines(args.flair, harmonized_flair)
+    args.t1 = harmonized_t1
+    args.flair = harmonized_flair
+    # An existing segmentation is read in FLAIR space by the same tools, so it
+    # has to be harmonized the same way or it would disagree with the harmonized
+    # FLAIR exactly as the raw inputs disagreed with each other.
+    if args.existing_seg and os.path.isfile(args.existing_seg):
+        harmonized_seg = os.path.join(work_dir, 'input_existing_seg.nii.gz')
+        harmonize_affines(args.existing_seg, harmonized_seg)
+        args.existing_seg = harmonized_seg
 
     #  Define Image Paths (original space)
     path_orig_t1w = os.path.join(work_dir, 'sub-X_ses-Y_space-t1w_T1w.nii.gz')
