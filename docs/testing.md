@@ -92,7 +92,7 @@ same as on x86_64:
 
 ```bash
 python3 -m venv lst_env && source lst_env/bin/activate
-git clone https://github.com/jqmcginnis/LST-AI.git && cd LST-AI
+git clone https://github.com/CompImg/LST-AI.git && cd LST-AI
 pip install -e .
 ```
 
@@ -135,7 +135,7 @@ x86_64 needs no wheel workaround; greedy comes straight from PyPI.
 
 ```bash
 python3 -m venv lst_env && source lst_env/bin/activate
-git clone https://github.com/jqmcginnis/LST-AI.git && cd LST-AI
+git clone https://github.com/CompImg/LST-AI.git && cd LST-AI
 pip install -e .
 ```
 
@@ -229,7 +229,7 @@ before `lst-ai:cpu`.)
 Confirms the shipped `.pt` reproduce the ONNX graphs bit-for-bit — the same check CI runs:
 
 ```bash
-curl -fsSL -o lst_data.zip https://github.com/jqmcginnis/LST-AI/releases/download/v2.0.0/lst_data_onnx.zip
+curl -fsSL -o lst_data.zip https://github.com/CompImg/LST-AI/releases/download/v2.0.0-data/lst_data_onnx.zip
 unzip -q lst_data.zip -d lst_data
 pip install 'pytest' 'onnx'
 LST_AI_MODEL_DIR=lst_data/model pytest tests -q -m needs_weights
@@ -265,7 +265,7 @@ that is the number users actually care about, and the claim to hold us to is Dic
 
 ## Reporting
 
-Please open an issue on `jqmcginnis/LST-AI` with:
+Please open an issue on `CompImg/LST-AI` with:
 
 - architecture, OS, Python version, GPU if any
 - which track and which steps, and the `compare_segmentations.py` output

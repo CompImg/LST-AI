@@ -32,10 +32,11 @@ def harmonize_affines(input_path, output_path):
 # fix is a package release against an unchanged bundle. Bump this only when the bundle's
 # contents actually change.
 #
-# STAGING: served from the fork while the first author reviews. Flip DATA_REPO to
-# CompImg/LST-AI once upstream publishes the same assets.
-DATA_REPO = "jqmcginnis/LST-AI"
-DATA_RELEASE = "v2.0.0"
+# v2.0.0-data is a data-only release: code releases and bundle releases are decoupled
+# on purpose, so re-tagging the code (rc -> final, patch releases) never touches the
+# bundle URL.
+DATA_REPO = "CompImg/LST-AI"
+DATA_RELEASE = "v2.0.0-data"
 
 # Contents of lst_data.zip at DATA_RELEASE: the PyTorch ensemble
 # (UNet3D_MS_final_mdl{A,B,C}.pt) plus the MNI atlas. No compiled 'binaries' -- greedy is

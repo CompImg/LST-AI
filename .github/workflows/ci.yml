@@ -73,7 +73,7 @@ jobs:
         # this job's whole claim is that the released .pt reproduce *these* graphs. If
         # the bytes ever change, the comparison is meaningless and should stop, loudly.
         run: |
-          curl -fsSL -o lst_data.zip https://github.com/jqmcginnis/LST-AI/releases/download/v2.0.0/lst_data_onnx.zip
+          curl -fsSL -o lst_data.zip https://github.com/CompImg/LST-AI/releases/download/v2.0.0-data/lst_data_onnx.zip
           echo "b17147e968c9f37834fddf33f75c9ac63f54885a17e00f9db58887c7810fa018  lst_data.zip" | sha256sum -c -
           unzip -q lst_data.zip -d lst_data
       - name: Install (with the onnx extra, which these tests need)
