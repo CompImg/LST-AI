@@ -27,7 +27,27 @@ env:
   IMAGE: jqmcginnis/lst-ai
 
 jobs:
+  # Secrets cannot be read in a job-level `if`, so a preflight job turns their
+  # presence into an output. On a repository without the DOCKERHUB_* secrets (e.g.
+  # upstream until its owner adds them) the whole workflow skips green instead of
+  # failing red at the login step.
+  creds:
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - id: check
+        run: |
+          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DOCKERHUB_USERNAME/DOCKERHUB_TOKEN not configured; skipping the push."
+          fi
+
   build-push:
+    needs: creds
+    if: needs.creds.outputs.ok == 'true'
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -67,7 +87,8 @@ jobs:
           if-no-files-found: error
 
   manifest:
-    needs: build-push
+    needs: [creds, build-push]
+    if: needs.creds.outputs.ok == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: docker/setup-buildx-action@v3

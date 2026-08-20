@@ -17,11 +17,17 @@ on:
 
 jobs:
   import-and-unit:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false          # one Python version failing should not mask the other
+      fail-fast: false          # one platform failing should not mask the others
       matrix:
+        os: [ubuntu-latest]
         python-version: ["3.10", "3.12"]
+        # One Apple Silicon leg: macOS has no CI-tested end-to-end run, but this at
+        # least guarantees the package and the network construct there continuously.
+        include:
+          - os: macos-14
+            python-version: "3.12"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -30,9 +36,15 @@ jobs:
       - name: Install (CPU torch, no CUDA wheels)
         # Deliberately without `onnx`: it became an optional extra in v2.0.0, so this
         # job doubles as the check that nothing on the inference path still imports it.
+        # The cpu wheel index is a Linux concern; on macOS the PyPI torch already is
+        # the CPU/MPS build, and the cpu index has no macOS wheels.
         run: |
           python -m pip install --upgrade pip
-          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            pip install torch
+          else
+            pip install --index-url https://download.pytorch.org/whl/cpu torch
+          fi
           pip install numpy scipy scikit-image nibabel pytest
       - name: Import the package without the heavy extras
         # picsl-greedy and hd-bet are not needed to construct or exercise the network,
