@@ -1,0 +1,98 @@
+# Build and push the multi-arch Docker images to Docker Hub.
+#
+# Runs on demand (workflow_dispatch) and on published releases, and needs two
+# repository secrets: DOCKERHUB_USERNAME and DOCKERHUB_TOKEN (an access token, not the
+# account password). Without them the workflow fails at the login step and pushes
+# nothing.
+#
+# Each architecture builds on its native runner (QEMU cross-builds of the arm64 image
+# take far longer), pushes by digest, and a final job stitches the digests into one
+# multi-arch manifest per flavour:
+#   jqmcginnis/lst-ai:<tag>       and :latest       -- CUDA image (amd64 + arm64)
+#   jqmcginnis/lst-ai:<tag>-cpu   and :latest-cpu   -- CPU image  (amd64 + arm64)
+# <tag> is the release tag, or the value given on manual dispatch.
+
+name: Docker
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to publish (e.g. v2.0.0)'
+        required: true
+
+env:
+  IMAGE: jqmcginnis/lst-ai
+
+jobs:
+  build-push:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: linux/amd64, runner: ubuntu-latest,     flavour: cuda }
+          - { platform: linux/arm64, runner: ubuntu-22.04-arm,  flavour: cuda }
+          - { platform: linux/amd64, runner: ubuntu-latest,     flavour: cpu }
+          - { platform: linux/arm64, runner: ubuntu-22.04-arm,  flavour: cpu }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: ${{ matrix.platform }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,push=true
+          build-args: |
+            ${{ matrix.flavour == 'cpu' && 'BASE_IMAGE=ubuntu:22.04' || '' }}
+            ${{ matrix.flavour == 'cpu' && 'TORCH_INDEX=https://download.pytorch.org/whl/cpu' || '' }}
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests/${{ matrix.flavour }}
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${{ matrix.flavour }}/${digest#sha256:}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.flavour }}-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+
+  manifest:
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-*
+          merge-multiple: true
+      - name: Create multi-arch manifests
+        run: |
+          TAG="${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}"
+          cd /tmp/digests/cuda
+          docker buildx imagetools create \
+            -t "$IMAGE:$TAG" -t "$IMAGE:latest" \
+            $(printf "$IMAGE@sha256:%s " *)
+          cd /tmp/digests/cpu
+          docker buildx imagetools create \
+            -t "$IMAGE:$TAG-cpu" -t "$IMAGE:latest-cpu" \
+            $(printf "$IMAGE@sha256:%s " *)
+      - name: Inspect the result
+        run: |
+          TAG="${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}"
+          docker buildx imagetools inspect "$IMAGE:$TAG"
+          docker buildx imagetools inspect "$IMAGE:$TAG-cpu"
