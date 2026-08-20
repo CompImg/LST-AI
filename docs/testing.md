@@ -4,9 +4,16 @@ This is the checklist for validating LST-AI v2.0.0 before it goes to CompImg/LST
 It exists because **the two architectures have been validated very unevenly**, and the
 gaps are not obvious from a green CI badge.
 
-If you are testing on **x86_64**, you want [Track B](#track-b--x86_64). On **aarch64**,
-[Track A](#track-a--aarch64). Both tracks end with the same
-[cross-machine comparison](#4-cross-machine-agreement), which is the interesting result.
+Pick your track:
+
+- **aarch64** → [Track A](#track-a--aarch64)
+- **x86_64** → [Track B](#track-b--x86_64)
+- **lesion annotation / FastSurfer** → [Track C](#track-c--lesion-annotation), for
+  whoever holds pre-port results — its remaining open item can only be checked against
+  those.
+
+A and B end at the same [cross-machine comparison](#4-cross-machine-agreement), which is
+the interesting result.
 
 ## What is already verified, and how
 
@@ -184,6 +191,65 @@ python scripts/compare_segmentations.py \
 
 CPU and GPU will not agree exactly — different kernels, different reduction orders — but
 should be well within the tolerances above.
+
+---
+
+## Track C — lesion annotation
+
+For whoever owns the FastSurfer annotation work. The annotation code
+(`lst_ai/annotate.py`) was not touched by the PyTorch port and has no unit coverage, and
+while FastSurfer now ships in every standard install and image, CI still never *runs* an
+annotation — so this track is where its verification is tracked. Status as of
+2026-08-20 (x86_64, RTX A6000):
+
+### C1. GPU memory — the reason ONNX Runtime was dropped ✔ verified
+
+The move off ONNX Runtime was motivated by its CUDA arena transiently grabbing ~40 GB at
+session init. Measured on a full default-mode run (segmentation + FastSurfer
+annotation): **peak ~5.2 GB**. To re-check on other hardware:
+
+```bash
+nvidia-smi --query-gpu=memory.used --format=csv -l 1 > mem.log &
+lst --t1 t1.nii.gz --flair flair.nii.gz --output out --device 0
+kill %1; sort -k1 -n mem.log | tail -1
+```
+
+Ideally with something else already resident on the GPU, since contention was the
+original failure mode. Anything approaching tens of GB is a regression.
+
+### C2. Annotation end to end ✔ verified
+
+Run on three real T1w/FLAIR subjects, through the venv install (GPU), the CUDA image,
+the CPU image, and the CPU image with `--network none`. All produced
+`space-flair_desc-annotated_seg-lst.nii.gz` and `annotated_lesion_stats.csv` with
+plausible per-region counts.
+
+### C3. Region assignments against a TensorFlow-era baseline — OPEN
+
+**The remaining item, and the one only the annotation author can close**, because it
+needs results from before the port. Lesion boundaries moved slightly (Dice 0.9957
+against TensorFlow), and region assignment depends on those boundaries: a small lesion
+on a region border can flip category without the segmentation meaningfully changing.
+Compare `annotated_lesion_stats.csv` against a pre-port run of the same subject and
+check the **per-region counts**, not just the total.
+
+Some churn in borderline lesions is expected. A systematic shift — one region
+consistently gaining or losing — is not, and is worth reporting.
+
+### C4. The `--annotate_only` path ✔ verified
+
+Annotating an existing segmentation skips the network entirely and exercises a different
+branch of `lst` than C2:
+
+```bash
+lst --t1 t1.nii.gz --flair flair.nii.gz --existing_seg my_seg.nii.gz \
+    --annotate_only --output out --device 0
+```
+
+Verified 2026-08-20: fed a prior run's binary segmentation back through
+`--annotate_only`; the annotated mask is voxel-wise identical to that run's own
+annotation of the same mask, with identical per-region stats — the annotation stage is
+deterministic given the same inputs.
 
 ---
 
