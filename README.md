@@ -26,10 +26,22 @@ To allow the usage of LST-AI on different platforms and online/offline usage, we
 
 ### Installing the Python package
 
-LST-AI installs from pip. Inference runs in **PyTorch** — there is no TensorFlow, no ONNX
+LST-AI installs from PyPI. Inference runs in **PyTorch** — there is no TensorFlow, no ONNX
 Runtime and, since v2.0.0, no `onnx` dependency either: the released weights ship as `.pt`
 checkpoints. `greedy` (registration) and HD-BET (skull stripping) install as wheels too,
 so nothing is compiled.
+
+```bash
+python3 -m venv lst_env && source lst_env/bin/activate
+pip install lst-ai
+```
+
+While 2.0.0 is in its release-candidate phase, pip needs to be told that a
+pre-release is acceptable: `pip install --pre lst-ai` (or pin it explicitly,
+`pip install lst-ai==2.0.0rc1`). Once the final 2.0.0 is published, the plain command
+above is all there is.
+
+To work on LST-AI itself, install the repository in editable mode instead:
 
 ```bash
 python3 -m venv lst_env && source lst_env/bin/activate
@@ -43,19 +55,18 @@ suitable interpreter itself, so nothing has to be installed system-wide:
 
 ```bash
 uv venv --python 3.12 lst_env && source lst_env/bin/activate
-git clone https://github.com/CompImg/LST-AI/ && cd LST-AI
-uv pip install -e .
+uv pip install lst-ai
 ```
 
 Note the `uv pip install` — a venv created by `uv venv` deliberately ships without
-`pip`, so the plain `pip install -e .` from above would fail inside it.
+`pip`, so the plain `pip install` from above would fail inside it.
 
 **GPU users, check your driver against PyTorch's default CUDA build.** The `torch`
 wheels on PyPI now target CUDA 13, which needs an R580+ driver; on an older driver
 (anything reporting CUDA ≤ 12.8 in `nvidia-smi`) the install succeeds but
 `torch.cuda.is_available()` is `False`, so every GPU run fails at startup ("driver too
 old") and only `--device cpu` works. Install torch from the index matching your driver
-*before* `pip install -e .`, e.g.:
+*before* installing `lst-ai`, e.g.:
 
 ```bash
 pip install --index-url https://download.pytorch.org/whl/cu126 torch
@@ -75,7 +86,7 @@ explicitly.
 
 `picsl-greedy` ships official PyPI wheels for linux/arm64 since 1.4.0.1
 ([pyushkevich/greedy_python#6](https://github.com/pyushkevich/greedy_python/pull/6)), so
-no platform needs a wheel workaround any more — `pip install -e .` covers every
+no platform needs a wheel workaround any more — the same install covers every
 supported architecture.
 
 ### What happened to TensorFlow?
@@ -103,9 +114,11 @@ measurements, the cause of the ONNX drift, and guidance if you are comparing aga
 earlier results.
 
 **Testing this release:** [docs/testing.md](docs/testing.md) is the validation checklist,
-split into an aarch64 and an x86_64 track. It also states plainly what has *not* been
-tested — the pipeline has never been run end to end on x86_64, and the CUDA image has
-never been run against a GPU — so if you are validating on either, start there.
+split into an aarch64 and an x86_64 track, with the expected run-to-run variation
+quantified. Both tracks have end-to-end runs recorded (x86_64 including the CUDA image on
+a real GPU); the remaining known gap is that CI builds and unit-tests but does not segment
+a subject, so further "worked for me" reports — especially from aarch64 and CPU-only
+machines — are genuinely useful.
 
 ### Lesion annotation with FastSurfer
 
@@ -192,12 +205,19 @@ We provide three different modes:
 
 While the installation and usage require internet access to install python packages and to download the weights and atlas, we understand that some researchers prefer to use lst-ai offline. Thus, we have decided to provide lst-ai as a CPU-/GPU-enabled docker container, which can be compiled using our scripts (for instructions please check the docker directory). If, instead of building the docker yourself, you would just rather use it, you can pull it from dockerhub instead.
 
-While we used to maintain jqmcginnis/lst-ai_cpu, we encourage everyone to use the unified jqmcginnis/lst-ai instead (CPU/GPU enabled). 
-You can pull it from dockerhub via executing:
+Images are published to Docker Hub under `jqmcginnis/lst-ai`, one CUDA and one CPU
+flavour per release, each as a multi-arch manifest (linux/amd64 + linux/arm64):
 
 ```bash
-docker pull jqmcginnis/lst-ai:v1.2.0
+docker pull jqmcginnis/lst-ai:v2.0.0        # CUDA flavour
+docker pull jqmcginnis/lst-ai:v2.0.0-cpu    # CPU flavour
 ```
+
+`latest` and `latest-cpu` track the newest stable release. Pre-releases are published
+only under their explicit tag (e.g. `v2.0.0rc1`, `v2.0.0rc1-cpu`) and never move
+`latest`, so a plain `docker pull jqmcginnis/lst-ai` cannot land on a candidate. The
+legacy `jqmcginnis/lst-ai_cpu` repository and the v1.x tags remain for the old
+TensorFlow-based images.
 
 #### Building the image yourself
 
@@ -300,7 +320,7 @@ FastSurfer's `--allow_root` when it is not running as root.
 
 #### Extending and modifying LST-AI for your custom code and pipeline
 
-We invite you to tailor LST-AI to your pipeline and application, please have a look at our [sources](LST-AI).
+We invite you to tailor LST-AI to your pipeline and application, please have a look at our [sources](lst_ai).
 
 ### BIDS Compliance with LST-AI
 
