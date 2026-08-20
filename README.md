@@ -37,10 +37,10 @@ git clone https://github.com/CompImg/LST-AI/ && cd LST-AI
 pip install -e .
 ```
 
-That pulls in `torch`, `picsl-greedy` and `hd-bet`. The model bundle and atlas are
-downloaded automatically on first run. It does *not* pull in FastSurfer, which a default
-run needs to annotate lesions — see [Lesion annotation with
-FastSurfer](#lesion-annotation-with-fastsurfer). The Docker image ships it; pip does not.
+That pulls in `torch`, `picsl-greedy`, `hd-bet` and FastSurfer, which every mode except
+`--segment_only` needs to annotate lesions — see [Lesion annotation with
+FastSurfer](#lesion-annotation-with-fastsurfer). The model bundle and atlas are
+downloaded automatically on first run. Nothing else has to be set up by hand.
 
 **On linux/arm64**, `picsl-greedy` has no wheel on PyPI (Kitware publishes the VTK
 wheel-SDK for x86_64 only, so greedy has to build VTK from source). Until aarch64 wheels
@@ -81,43 +81,44 @@ never been run against a GPU — so if you are validating on either, start there
 
 ### Lesion annotation with FastSurfer
 
-Lesions are assigned to anatomical regions using a FastSurfer segmentation of the T1. This is not an optional stage:
-every mode except `--segment_only` runs it, the default one included, so FastSurfer is a
-hard requirement of a normal `lst` run and ships inside the Docker image. Installing
-LST-AI with pip installs no FastSurfer — put `run_fastsurfer.sh` on your `PATH`
-yourself, or use the image, unless you only ever pass `--segment_only`.
+Lesions are assigned to anatomical regions using a FastSurfer segmentation of the T1. This
+is not an optional stage: every mode except `--segment_only` runs it, the default one
+included, so FastSurfer is a hard requirement of a normal `lst` run — and both the pip
+install and the Docker image bring it with them. There is nothing to install by hand.
 
-#### Installing FastSurfer alongside a pip install
+FastSurfer is not published on PyPI, so `pip install` brings it in two parts, identically
+on x86_64 and on arm64/aarch64:
 
-LST-AI shells out to `run_fastsurfer.sh`, so FastSurfer only has to be on your `PATH`
-with its dependencies importable from the same environment:
+- the Python dependencies of the segmentation path LST-AI drives are ordinary
+  requirements in `setup.py`, resolved by pip like `greedy` and HD-BET;
+- the FastSurfer source tree itself (~17 MB) is unpacked from the pinned release tarball
+  into `<your environment>/share/lst-ai/FastSurfer-v2.5.4` — or into
+  `~/.local/share/lst-ai/` when that prefix is not writable.
+
+LST-AI finds it there on its own: no `FASTSURFER_HOME`, no `PATH` entry, nothing to add to
+your `~/.bashrc`. The three VINN checkpoints (~65 MB) are fetched by FastSurfer on the
+first run that annotates, the same way LST-AI fetches its own model bundle.
+
+**This copy is the only one LST-AI uses.** A FastSurfer already on the machine — one
+`FASTSURFER_HOME` points at, or a `run_fastsurfer.sh` on `PATH` — is ignored, and there is
+no option to prefer it, so an annotation never depends on what a given machine happens to
+have lying around. The version is pinned in
+[LST_AI/fastsurfer.py](LST_AI/fastsurfer.py).
+
+Two things you can still do by hand:
 
 ```bash
-# 1. clone it, pinned to the version the Docker image ships
-git clone --depth 1 --branch v2.5.4 https://github.com/Deep-MI/FastSurfer.git ~/FastSurfer
+# fetch the checkpoints ahead of time, for a machine that will later be offline
+python -m LST_AI.fastsurfer --checkpoints
 
-# 2. the dependencies of the segmentation path, into your LST-AI environment
-#    (the rest of what it needs — numpy, scipy, nibabel, h5py, scikit-image — LST-AI
-#    already brings)
-pip install torchvision lapy neuroreg pandas torchio tqdm yacs pyyaml
-
-# 3. the three VINN checkpoints (~65 MB), so the first run does not go fetch them
-PYTHONPATH=~/FastSurfer python ~/FastSurfer/FastSurferCNN/download_checkpoints.py --vinn
-
-# 4. make it findable — add these to your ~/.bashrc to keep them
-export FASTSURFER_HOME=~/FastSurfer
-export PATH="$FASTSURFER_HOME:$PATH"
+# re-download the tree, if it was interrupted or something under it was edited
+python -m LST_AI.fastsurfer --force
 ```
 
-Check it with `run_fastsurfer.sh --version`, which should print `2.5.4+…`.
-
-**Do not `pip install ~/FastSurfer` itself.** Its metadata pins `torch==2.7.*` and would
-downgrade the torch you installed for LST-AI (on aarch64 there is no CUDA wheel for that
-version at all, so you would silently land on a CPU build), and it pulls `meshpy` for the
-corpus-callosum module, which LST-AI switches off and which has no aarch64 wheel. Step 2
-is that dependency list minus those two problems; `docker/Dockerfile` carries the same
-list with upstream's version floors and is the authoritative copy (it installs
-`torchvision` alongside `torch` rather than in that block).
+Setting `LST_AI_SKIP_FASTSURFER=1` before `pip install` skips the download at install
+time — it defers it to the first run that annotates, it does not substitute another
+FastSurfer. A failed download never fails the install, for the same reason: `--segment_only`
+still works, and the download is retried on first use.
 
 ### Training your own models
 

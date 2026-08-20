@@ -1,9 +1,71 @@
+import importlib.util
+import os
+import sys
 from pathlib import Path
 
 from setuptools import setup, find_packages
+from setuptools.command.build_py import build_py
+
+_HERE = Path(__file__).parent
 
 # Without these two, PyPI renders an empty project page and twine warns on every upload.
-_README = (Path(__file__).parent / 'README.md').read_text(encoding='utf-8')
+_README = (_HERE / 'README.md').read_text(encoding='utf-8')
+
+
+def _load_fastsurfer_module():
+    """Load LST_AI/fastsurfer.py by path, rather than by `import LST_AI.fastsurfer`.
+
+    setup.py runs before the package is installed, and cannot count on the source tree
+    being importable: PEP 517 backends execute it from a directory of their own choosing.
+    Reading the one file directly sidesteps sys.path entirely -- and that module is
+    stdlib-only precisely so it can be read here, with none of LST-AI's own dependencies
+    installed yet.
+    """
+    spec = importlib.util.spec_from_file_location(
+        '_lst_ai_fastsurfer', _HERE / 'LST_AI' / 'fastsurfer.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_fastsurfer = _load_fastsurfer_module()
+
+
+class BuildPyWithFastSurfer(build_py):
+    """Fetch FastSurfer as part of the build, so a pip install ships it like the rest.
+
+    Lesion annotation *is* a FastSurfer segmentation of the T1, and it runs in every mode
+    except --segment_only, so FastSurfer belongs with greedy and HD-BET rather than in a
+    list of manual follow-up steps. Its Python dependencies are ordinary wheels and ride
+    along in install_requires below; only the source tree has to be fetched here, since
+    FastSurfer is not published on PyPI (see LST_AI/fastsurfer.py for the full reasoning,
+    including why its own metadata cannot be used).
+
+    build_py is the hook that runs for `pip install .` *and* `pip install -e .`, on both
+    architectures; `install` would be skipped by every wheel-based install. The tree is
+    written outside the build directory, so it is never baked into the wheel -- a wheel
+    built here stays a normal small wheel, and LST_AI.fastsurfer.ensure_fastsurfer()
+    fetches on first use for whoever installs it.
+    """
+
+    def run(self):
+        if os.environ.get('LST_AI_SKIP_FASTSURFER'):
+            print('LST_AI_SKIP_FASTSURFER set: not installing FastSurfer.')
+        else:
+            try:
+                # find first: an existing FASTSURFER_HOME or a run_fastsurfer.sh on PATH
+                # is the installation this machine already has, and it wins.
+                home = (_fastsurfer.find_fastsurfer()
+                        or _fastsurfer.install_fastsurfer())
+                print(f'FastSurfer {_fastsurfer.FASTSURFER_REF} ready in {home}')
+            except Exception as exc:
+                # Never fail the install over this. A machine that cannot reach GitHub
+                # right now still gets a working --segment_only, and the first run that
+                # needs an annotation retries the download itself.
+                print(f'WARNING: could not install FastSurfer: {exc}\n'
+                      f'         LST-AI will retry on the first run that annotates '
+                      f'lesions; --segment_only is unaffected.', file=sys.stderr)
+        super().run()
 
 setup(
     name='LST_AI',
@@ -30,22 +92,29 @@ setup(
     #   - registration: picsl-greedy (Python API, same greedy engine).
     #   - brain extraction: brainles_hd_bet, a pinned HD-BET v1 fork -- the version the
     #     released weights were validated against, and the only one with an arm64 wheel.
+    #   - anatomical annotation: FastSurfer. Its Python dependencies are the wheels in
+    #     FASTSURFER_REQUIRES; the source tree itself is fetched by the build_py hook
+    #     above, because FastSurfer is not on PyPI.
     #
     # CPU vs CUDA is a property of the deployment's torch wheel (the host/container's
     # CUDA), not of LST-AI, so no per-backend extra is needed.
     python_requires='>=3.10',
+    # The floors on numpy, scipy, nibabel, h5py and requests are FastSurfer's, not
+    # LST-AI's own -- FastSurfer now runs out of the same environment, so its
+    # requirements on the packages the two share are requirements of this install.
+    # scikit-image's floor is already above the >=0.19.3 it asks for.
     install_requires=[
-        'numpy',
+        'numpy>=1.25',
         'pillow',
-        'scipy>=1.9.0',
+        'scipy>=1.10.1,!=1.13.0',
         'scikit-image>=0.21.0',
-        'nibabel',
-        'requests',
+        'nibabel>=5.4.0',
+        'requests>=2.31.0',
         'torch',
-        'h5py',
+        'h5py>=3.7',
         'picsl-greedy',
         'brainles_hd_bet',
-    ],
+    ] + _fastsurfer.FASTSURFER_REQUIRES,
     extras_require={
         # Only for reading a legacy v1.3.0 .onnx bundle, or re-running the .onnx -> .pt
         # export in LST_AI/weights.py. Not needed to run inference.
@@ -54,6 +123,7 @@ setup(
     scripts=['LST_AI/lst'],
     license='MIT',
     packages=find_packages(include=['LST_AI']),
+    cmdclass={'build_py': BuildPyWithFastSurfer},
     classifiers=[
         'Intended Audience :: Science/Research',
         'Programming Language :: Python',
