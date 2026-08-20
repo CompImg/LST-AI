@@ -1,0 +1,105 @@
+# Build and publish the lst-ai distribution.
+#
+# Publishing uses PyPI Trusted Publishing (OIDC) -- no long-lived tokens in secrets.
+# Before the first publish can work, the project must be configured once on the PyPI
+# side: pypi.org -> account -> Publishing -> add a "pending publisher" for this
+# repository, workflow file publish.yml, environment pypi (and the same on
+# test.pypi.org with environment testpypi). Until that is done, the publish jobs fail
+# with an OIDC error; the build job is independent and always works.
+#
+# The wheel is pure Python and identical everywhere, so one build job is enough --
+# platform coverage lives in ci.yml, not here. LST_AI_SKIP_FASTSURFER keeps the
+# build_py hook from downloading FastSurfer onto the runner: the wheel never contains
+# it either way (the hook writes it outside the build tree), so fetching it here would
+# be pure waste. Installs from this wheel fetch FastSurfer on the first run that
+# annotates, exactly like a LST_AI_SKIP_FASTSURFER=1 source install.
+
+name: Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      publish_testpypi:
+        type: boolean
+        description: 'Upload this build to TestPyPI?'
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade build twine
+          LST_AI_SKIP_FASTSURFER=1 python -m build
+      - name: Release tag must match the package version
+        # A release tagged v2.0.0 must not quietly upload a wheel that says 2.0.0rc1
+        # (or vice versa). Fail here, before anything reaches an index.
+        if: github.event_name == 'release'
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION=$(python - <<'EOF'
+          import glob, os
+          print(os.path.basename(glob.glob('dist/*.whl')[0]).split('-')[1])
+          EOF
+          )
+          if [ "v$VERSION" != "$TAG" ]; then
+            echo "::error::release tag $TAG does not match package version $VERSION"
+            exit 1
+          fi
+      - name: Check the distribution metadata
+        run: twine check --strict dist/*
+      - name: Assert the wheel is small and FastSurfer-free
+        # The build hook writes FastSurfer outside the build tree; if that ever
+        # regresses, the wheel balloons from ~50 KB to tens of MB. Catch it here.
+        run: |
+          python - <<'EOF'
+          import glob, os, zipfile
+          wheel = glob.glob('dist/*.whl')[0]
+          size = os.path.getsize(wheel)
+          assert size < 5_000_000, f'{wheel} is {size} bytes; FastSurfer leaked into it?'
+          names = zipfile.ZipFile(wheel).namelist()
+          assert not any('FastSurfer' in n for n in names), 'FastSurfer tree inside the wheel'
+          assert any(n.endswith('lst_ai/lst') or n.endswith('scripts/lst') for n in names), 'lst script missing'
+          print(f'{wheel}: {size} bytes, {len(names)} files')
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-testpypi:
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_testpypi
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    needs: build
+    if: github.event_name == 'release' && github.event.action == 'published'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

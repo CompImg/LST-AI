@@ -1,0 +1,125 @@
+# CI for the PyTorch reimplementation.
+#
+# Deliberately split so the cheap, always-useful checks do not depend on the ~390 MB
+# model bundle: `import-and-unit` runs on every push in under a minute, while
+# `weights-parity` needs the bundle and is cached between runs.
+#
+# Note the Docker job builds but does not push. Pushing needs registry secrets, which
+# are a repository-level setting; wire that up only once the credentials exist.
+
+name: CI
+
+on:
+  push:
+    branches: [main, "jqm/**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  import-and-unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false          # one Python version failing should not mask the other
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install (CPU torch, no CUDA wheels)
+        # Deliberately without `onnx`: it became an optional extra in v2.0.0, so this
+        # job doubles as the check that nothing on the inference path still imports it.
+        run: |
+          python -m pip install --upgrade pip
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install numpy scipy scikit-image nibabel pytest
+      - name: Import the package without the heavy extras
+        # picsl-greedy and hd-bet are not needed to construct or exercise the network,
+        # so this stays fast and catches import-level breakage early.
+        run: python -c "from lst_ai.model import NNUNet3D, SHIPPED_VARIANTS; print(sorted(SHIPPED_VARIANTS))"
+      - name: Architecture tests
+        run: pytest tests -q -m "not needs_weights"
+      - name: Training-side tests (dataset, losses, trainer)
+        # tensorboard so the --tensorboard test actually runs rather than being skipped;
+        # it is optional for users, not for CI.
+        run: |
+          pip install nibabel tensorboard
+          pytest training/tests -q
+
+  weights-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache the model bundle
+        id: cache-models
+        uses: actions/cache@v4
+        with:
+          path: lst_data
+          key: lst-data-onnx-v2.0.0
+      - name: Fetch the ONNX bundle
+        if: steps.cache-models.outputs.cache-hit != 'true'
+        # The *ONNX* asset, not lst_data.zip, on purpose: this job re-runs the
+        # .onnx -> .pt export and holds it to bit-exactness, so it has to start from the
+        # graphs the released checkpoints were derived from, not from the .pt bundle it
+        # is validating. Those bytes are the ones tf2onnx produced from the released
+        # .h5, carried forward unchanged from the retired v1.3.0 release.
+        #
+        # -f so a missing asset fails here rather than saving GitHub's 404 page and
+        # failing three steps later as "not a zipfile", and the digest is pinned because
+        # this job's whole claim is that the released .pt reproduce *these* graphs. If
+        # the bytes ever change, the comparison is meaningless and should stop, loudly.
+        run: |
+          curl -fsSL -o lst_data.zip https://github.com/CompImg/LST-AI/releases/download/v2.0.0-data/lst_data_onnx.zip
+          echo "b17147e968c9f37834fddf33f75c9ac63f54885a17e00f9db58887c7810fa018  lst_data.zip" | sha256sum -c -
+          unzip -q lst_data.zip -d lst_data
+      - name: Install (with the onnx extra, which these tests need)
+        run: |
+          pip install --index-url https://download.pytorch.org/whl/cpu torch
+          pip install onnx numpy scipy scikit-image nibabel pytest
+      - name: Weights load bit-for-bit, and the released .pt export reproduces them
+        run: pytest tests -q -m needs_weights
+
+  docker:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Both flavours are built, because they are not the same image: the CPU one has
+        # a different base and a different torch wheel, so a CUDA-only build would not
+        # catch a break in it. The CPU image is also the one most users on a laptop or a
+        # cluster login node will actually run.
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            flavour: cuda
+          - platform: linux/arm64
+            runner: ubuntu-22.04-arm
+            flavour: cuda
+          - platform: linux/amd64
+            runner: ubuntu-latest
+            flavour: cpu
+          - platform: linux/arm64
+            runner: ubuntu-22.04-arm
+            flavour: cpu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      # Native runners per architecture: an arm64 image built under QEMU on an x86
+      # runner takes far longer and is only worth it if no arm runner is available.
+      - name: Build ${{ matrix.platform }} (${{ matrix.flavour }})
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: false
+          # The CPU flavour is the same Dockerfile with a plain Ubuntu base and the CPU
+          # torch index -- no separate file to drift out of sync. greedy installs from
+          # PyPI on both architectures since picsl-greedy 1.4.0.1.
+          build-args: |
+            ${{ matrix.flavour == 'cpu' && 'BASE_IMAGE=ubuntu:22.04' || '' }}
+            ${{ matrix.flavour == 'cpu' && 'TORCH_INDEX=https://download.pytorch.org/whl/cpu' || '' }}
