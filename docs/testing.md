@@ -17,20 +17,24 @@ If you are testing on **x86_64**, you want [Track B](#track-b--x86_64). On **aar
 | Segmentation agrees with TensorFlow | 10 real subjects, full ensemble | Dice **0.99565**, volume **−0.12 %** |
 | Package imports and unit-tests pass | CI, Python 3.10 and 3.12 | verified |
 | Docker images build | CI, {amd64, arm64} × {cuda, cpu} | verified |
-| Full pipeline runs end to end | manual, **aarch64 only** | verified on aarch64 |
-| `pip install` → `lst` runs | manual, **aarch64 only** | verified on aarch64 |
+| Full pipeline runs end to end | manual: aarch64 (CPU); x86_64 (venv+GPU, Docker CUDA+GPU, Docker CPU), 3 subjects, 2026-08-20 | verified on both |
+| `pip install` → `lst` runs | manual, aarch64 and x86_64 | verified on both |
+| CUDA image runs on a real GPU | manual, RTX A6000, peak ~5.2 GB VRAM | verified |
+| FastSurfer annotation end to end | manual, x86_64, 3 real subjects, venv and Docker | verified |
+| venv and Docker agree | same subject both ways: Dice 0.86–0.90, within same-image repeat-run variation (0.857) | verified |
 
 ## What is not verified — the point of this document
 
-1. **The pipeline has never been run on x86_64.** Images build there; nothing has been
-   segmented. This is the single biggest gap, because x86_64 is what almost every user
-   is on.
-2. **The CUDA image has never been run against a GPU.** It builds, and the code paths are
-   exercised on CPU, but no GPU has executed it.
-3. **CI does not segment a subject.** It builds and unit-tests only. A regression that
+1. **CI does not segment a subject.** It builds and unit-tests only. A regression that
    breaks registration or skull-stripping would pass CI.
-4. **FastSurfer annotation has had no end-to-end run on real data** on either
-   architecture. Annotation runs in every mode except `--segment_only`, so FastSurfer and its VINN checkpoints ship in the standard build.
+
+Three gaps this section used to list were closed on 2026-08-20 (x86_64, Ubuntu 22.04
+host, RTX A6000, three T1w/FLAIR subjects): the pipeline now has end-to-end x86_64 runs
+(venv with GPU, CUDA image with GPU, CPU image with `--device cpu`), the CUDA image has
+executed against a real GPU (peak ~5.2 GB VRAM — the "few GB" expectation holds, no ORT
+arena regression), and FastSurfer annotation has run end to end on real data in both the
+venv and the containers. The numbers are in the table above and the calibration table
+below.
 
 ## Before you start: expected variation
 
@@ -44,6 +48,8 @@ For calibration, measured on the same subject:
 |---|---|
 | PyTorch vs TensorFlow, same machine | 0.9957 |
 | identical code, container vs virtualenv | 0.883 |
+| identical image, run twice (x86_64, GPU) | 0.857 |
+| container vs virtualenv, x86_64 GPU, 3 subjects | 0.86–0.90 |
 
 The container-vs-virtualenv number is the important one: **the environment moves the
 result more than the framework swap does.** So when comparing x86_64 against aarch64,
@@ -128,9 +134,11 @@ First run downloads ~176 MB of weights plus HD-BET's parameters. Result:
 
 ## Track B — x86_64
 
-**This track has never been run. Everything below is untested on this architecture — a
-failure here is a real finding, not a mistake on your part.** Please report what happens
-either way, including success.
+First run on 2026-08-20 (Ubuntu 22.04 host, Python 3.12, RTX A6000): B1, B2 and B4 pass,
+plus both Docker flavours end to end (the CPU one with `--device cpu`), on three
+subjects. B3 — the *native* CPU run — has not been exercised yet, though the same code
+path runs in the CPU image. Further runs on other x86_64 machines are still worth
+reporting, especially CPU-only ones.
 
 ### B1. Install from source
 

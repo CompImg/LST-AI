@@ -117,9 +117,11 @@ jobs:
           file: docker/Dockerfile
           platforms: ${{ matrix.platform }}
           push: false
-          # The Dockerfile defaults arm64 to an unofficial prebuilt greedy wheel, since
-          # none is published upstream. Set the repository variable GREEDY_WHEEL_ARM64
-          # to override it (e.g. once official wheels exist).
+          # The Dockerfile defaults arm64 to a prebuilt greedy wheel, since none is
+          # published upstream, and verifies it against docker/greedy-wheels.sha256.
+          # Set the repository variable GREEDY_WHEEL_ARM64 to override it (e.g. once
+          # official wheels exist); an overridden wheel is installed unverified, so add
+          # its digest to that file and drop the variable once it is the one we want.
           #
           # The CPU flavour is the same Dockerfile with a plain Ubuntu base and the CPU
           # torch index -- no separate file to drift out of sync.

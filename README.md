@@ -37,7 +37,33 @@ git clone https://github.com/CompImg/LST-AI/ && cd LST-AI
 pip install -e .
 ```
 
-That pulls in `torch`, `picsl-greedy`, `hd-bet` and FastSurfer, which every mode except
+If your system Python is older than 3.10 (LST-AI's floor) or you simply want faster
+installs, [`uv`](https://docs.astral.sh/uv/) is a good alternative — it fetches a
+suitable interpreter itself, so nothing has to be installed system-wide:
+
+```bash
+uv venv --python 3.12 lst_env && source lst_env/bin/activate
+git clone https://github.com/CompImg/LST-AI/ && cd LST-AI
+uv pip install -e .
+```
+
+Note the `uv pip install` — a venv created by `uv venv` deliberately ships without
+`pip`, so the plain `pip install -e .` from above would fail inside it.
+
+**GPU users, check your driver against PyTorch's default CUDA build.** The `torch`
+wheels on PyPI now target CUDA 13, which needs an R580+ driver; on an older driver
+(anything reporting CUDA ≤ 12.8 in `nvidia-smi`) the install succeeds but
+`torch.cuda.is_available()` is `False`, so every GPU run fails at startup ("driver too
+old") and only `--device cpu` works. Install torch from the index matching your driver
+*before* `pip install -e .`, e.g.:
+
+```bash
+pip install --index-url https://download.pytorch.org/whl/cu126 torch
+```
+
+The GPU Docker image is pinned to cu126 and does not have this problem.
+
+Either way, the install pulls in `torch`, `picsl-greedy`, `hd-bet` and FastSurfer, which every mode except
 `--segment_only` needs to annotate lesions — see [Lesion annotation with
 FastSurfer](#lesion-annotation-with-fastsurfer). The model bundle and atlas are
 downloaded automatically on first run. Nothing else has to be set up by hand.
